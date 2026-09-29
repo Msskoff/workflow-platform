@@ -13,7 +13,13 @@ export const projectRules = {
 };
 
 export default defineConfig([
-  globalIgnores(['**/dist/**', '**/.next/**', '**/coverage/**', '**/node_modules/**']),
+  globalIgnores([
+    '**/dist/**',
+    '**/.next/**',
+    '**/coverage/**',
+    '**/node_modules/**',
+    '**/src/generated/**',
+  ]),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

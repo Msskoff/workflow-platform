@@ -8,6 +8,11 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
+# Prisma : client généré (npm run db:generate) et bases SQLite locales
+apps/api/src/generated/
+*.db
+*.db-journal
+
 # Tests
 coverage/
 

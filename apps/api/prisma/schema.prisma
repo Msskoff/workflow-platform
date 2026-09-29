@@ -1,0 +1,12 @@
+// Schéma Prisma de l'API. Les modèles métier arrivent aux étapes suivantes.
+// L'URL de connexion est définie dans prisma.config.ts (Prisma 7).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}

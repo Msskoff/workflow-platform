@@ -11,6 +11,10 @@
     "node": ">=22.12"
   },
   "scripts": {
+    "postinstall": "npm run db:generate",
+    "db:generate": "npm run db:generate -w @workflow/api",
+    "db:migrate": "npm run db:migrate -w @workflow/api",
+    "db:studio": "npm run db:studio -w @workflow/api",
     "dev": "npm run build -w @workflow/shared && concurrently --kill-others-on-fail -n shared,api,web -c blue,magenta,green \"npm run dev -w @workflow/shared\" \"npm run dev -w @workflow/api\" \"npm run dev -w @workflow/web\"",
     "build": "npm run build -w @workflow/shared -w @workflow/api -w @workflow/web",
     "lint": "npm run lint --workspaces --if-present",

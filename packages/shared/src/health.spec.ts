@@ -5,6 +5,7 @@ describe('healthStatusSchema', () => {
     const result = healthStatusSchema.safeParse({
       status: 'ok',
       service: 'api',
+      database: 'up',
       timestamp: new Date().toISOString(),
     });
 
@@ -15,6 +16,7 @@ describe('healthStatusSchema', () => {
     const result = healthStatusSchema.safeParse({
       status: 'down',
       service: 'api',
+      database: 'up',
       timestamp: 'hier',
     });
 

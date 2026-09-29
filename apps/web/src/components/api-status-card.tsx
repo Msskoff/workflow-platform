@@ -20,6 +20,12 @@ export function ApiStatusCard({ apiUrl, result }: ApiStatusCardProps) {
         <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-neutral-500">Service</dt>
           <dd>{result.health.service}</dd>
+          <dt className="text-neutral-500">Statut</dt>
+          <dd>{result.health.status}</dd>
+          <dt className="text-neutral-500">Base de données</dt>
+          <dd className={result.health.database === 'up' ? 'text-emerald-700' : 'text-red-700'}>
+            {result.health.database}
+          </dd>
           <dt className="text-neutral-500">Horodatage</dt>
           <dd className="font-mono">{result.health.timestamp}</dd>
         </dl>
