@@ -1,0 +1,62 @@
+import { z } from 'zod';
+import { horodatageSchema, identifiantSchema, type Transitions } from './commun';
+import { workflowSnapshotSchema } from './workflow-snapshot';
+
+export const statutsExecution = ['en_attente', 'en_cours', 'terminee', 'echouee'] as const;
+
+export const statutExecutionSchema = z.enum(statutsExecution);
+
+export type StatutExecution = z.infer<typeof statutExecutionSchema>;
+
+/** Cycle de vie d'une exécution : les statuts finaux n'ont plus de transition. */
+export const transitionsStatutExecution: Transitions<StatutExecution> = {
+  en_attente: ['en_cours', 'echouee'],
+  en_cours: ['terminee', 'echouee'],
+  terminee: [],
+  echouee: [],
+};
+
+/**
+ * Exécution d'un workflow pour une campagne.
+ * `version` numérote les exécutions d'un même workflow sur une même campagne (1, 2, 3…).
+ * `snapshot` et `empreinteSnapshot` sont figés à la création.
+ */
+export const executionWorkflowSchema = z.object({
+  id: identifiantSchema,
+  campagneId: identifiantSchema,
+  workflowId: identifiantSchema,
+  version: z.int().positive(),
+  snapshot: workflowSnapshotSchema,
+  empreinteSnapshot: z.string().regex(/^[a-f0-9]{64}$/),
+  statut: statutExecutionSchema,
+  erreur: z.string().nullable(),
+  demarreeLe: horodatageSchema.nullable(),
+  termineeLe: horodatageSchema.nullable(),
+  creeLe: horodatageSchema,
+  modifieLe: horodatageSchema,
+});
+
+export type ExecutionWorkflow = z.infer<typeof executionWorkflowSchema>;
+
+export const creerExecutionWorkflowSchema = z.object({
+  campagneId: identifiantSchema,
+  snapshot: workflowSnapshotSchema,
+});
+
+export type CreerExecutionWorkflow = z.infer<typeof creerExecutionWorkflowSchema>;
+
+/** Seul le statut évolue ; `erreur` n'est accepté que pour passer à `echouee`. */
+export const modifierExecutionWorkflowSchema = z.object({
+  statut: statutExecutionSchema,
+  erreur: z.string().trim().min(1).max(2000).optional(),
+});
+
+export type ModifierExecutionWorkflow = z.infer<typeof modifierExecutionWorkflowSchema>;
+
+export const filtreExecutionsSchema = z.object({
+  campagneId: identifiantSchema.optional(),
+  workflowId: identifiantSchema.optional(),
+  statut: statutExecutionSchema.optional(),
+});
+
+export type FiltreExecutions = z.infer<typeof filtreExecutionsSchema>;

@@ -1,5 +1,18 @@
-// Schéma Prisma de l'API. Les modèles métier arrivent aux étapes suivantes.
-// L'URL de connexion est définie dans prisma.config.ts (Prisma 7).
+// Schéma Prisma de l'API. L'URL de connexion est définie dans prisma.config.ts (Prisma 7).
+//
+// Modèle métier : Client → Parcelle → Campagne → ExecutionWorkflow → Decision
+//                                        └→ DonneeBrute (données collectées, immuables)
+//
+// Suppressions : `onDelete: Restrict` partout. On ne supprime jamais un parent qui a des
+// enfants, pour ne pas perdre la traçabilité des décisions.
+//
+// Statuts : stockés en texte, les valeurs autorisées sont définies par les schémas Zod
+// de @workflow/shared (statutsExecution, statutsDecision, typesDonneeBrute).
+//
+// ATTENTION : la migration `modele_metier` ajoute des triggers SQLite qui rendent immuables
+// les DonneeBrute et le snapshot des ExecutionWorkflow. Si une future migration reconstruit
+// ces tables (Prisma le fait sur SQLite pour certains changements de colonnes), elle doit
+// recréer ces triggers.
 
 generator client {
   provider     = "prisma-client"
@@ -9,4 +22,104 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+model Client {
+  id        String     @id @default(cuid())
+  nom       String
+  email     String?
+  telephone String?
+  parcelles Parcelle[]
+  creeLe    DateTime   @default(now())
+  modifieLe DateTime   @updatedAt
+}
+
+model Parcelle {
+  id        String     @id @default(cuid())
+  clientId  String
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  nom       String
+  /// GeoJSON Polygon ou MultiPolygon, WGS84 (voir geometrieParcelleSchema).
+  geometrie Json
+  /// Calculée par l'API à partir de la géométrie.
+  surfaceHa Float
+  campagnes Campagne[]
+  creeLe    DateTime   @default(now())
+  modifieLe DateTime   @updatedAt
+
+  @@index([clientId])
+}
+
+model Campagne {
+  id            String              @id @default(cuid())
+  parcelleId    String
+  parcelle      Parcelle            @relation(fields: [parcelleId], references: [id], onDelete: Restrict)
+  nom           String
+  culture       String?
+  /// Date calendaire AAAA-MM-JJ.
+  dateDebut     String
+  /// Date calendaire AAAA-MM-JJ ; null tant que la campagne est en cours.
+  dateFin       String?
+  donneesBrutes DonneeBrute[]
+  executions    ExecutionWorkflow[]
+  creeLe        DateTime            @default(now())
+  modifieLe     DateTime            @updatedAt
+
+  @@index([parcelleId])
+}
+
+/// Donnée collectée (GPS, formulaire terrain, métadonnées Sentinel-2). Immuable (triggers).
+model DonneeBrute {
+  id         String   @id @default(cuid())
+  campagneId String
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Restrict)
+  /// gps | formulaire_terrain | image_sentinel2
+  type       String
+  source     String
+  contenu    Json
+  /// SHA-256 du contenu sérialisé canoniquement.
+  empreinte  String
+  importeeLe DateTime @default(now())
+
+  @@index([campagneId, type])
+}
+
+/// Exécution d'un workflow. snapshot, empreinteSnapshot, version, workflowId et campagneId sont figés (trigger).
+model ExecutionWorkflow {
+  id                String     @id @default(cuid())
+  campagneId        String
+  campagne          Campagne   @relation(fields: [campagneId], references: [id], onDelete: Restrict)
+  workflowId        String
+  /// Numéro d'exécution de ce workflow sur cette campagne : 1, 2, 3…
+  version           Int
+  /// Copie du workflow exécuté (voir workflowSnapshotSchema).
+  snapshot          Json
+  empreinteSnapshot String
+  /// en_attente | en_cours | terminee | echouee
+  statut            String     @default("en_attente")
+  erreur            String?
+  demarreeLe        DateTime?
+  termineeLe        DateTime?
+  decisions         Decision[]
+  creeLe            DateTime   @default(now())
+  modifieLe         DateTime   @updatedAt
+
+  @@unique([campagneId, workflowId, version])
+}
+
+model Decision {
+  id          String            @id @default(cuid())
+  executionId String
+  execution   ExecutionWorkflow @relation(fields: [executionId], references: [id], onDelete: Restrict)
+  /// Identifiants des nœuds du snapshot qui ont produit la décision (tableau JSON).
+  noeudIds    Json
+  explication String
+  /// brouillon | validé | envoyé
+  statut      String            @default("brouillon")
+  valideeLe   DateTime?
+  envoyeeLe   DateTime?
+  creeLe      DateTime          @default(now())
+  modifieLe   DateTime          @updatedAt
+
+  @@index([executionId, statut])
 }

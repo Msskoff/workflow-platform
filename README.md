@@ -38,6 +38,24 @@ npm run dev            # build shared, puis shared (watch) + api + web en parall
 | `npm run db:generate` | Régénère le client Prisma                                                    |
 | `npm run db:studio`   | Ouvre Prisma Studio (navigateur de données)                                  |
 
+## Modèle métier (API)
+
+`Client → Parcelle → Campagne → ExecutionWorkflow → Decision`, plus les `DonneeBrute` d'une campagne.
+Types et schémas Zod dans `packages/shared/src/domaine`, modèles Prisma dans `apps/api/prisma/schema.prisma`.
+
+| Route             | Opérations                  | Règles clés                                                                  |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------- |
+| `/clients`        | CRUD, filtre `?nom=`        | Suppression refusée (409) si le client a des parcelles                       |
+| `/parcelles`      | CRUD, filtre `?clientId=`   | Géométrie GeoJSON (Polygon/MultiPolygon), `surfaceHa` calculée par l'API     |
+| `/campagnes`      | CRUD, filtre `?parcelleId=` | Date de fin ≥ date de début                                                  |
+| `/donnees-brutes` | Import + lecture uniquement | Immuables (triggers SQLite), empreinte SHA-256 du contenu                    |
+| `/executions`     | CRUD, filtres               | `version` incrémentée par campagne et workflow, snapshot figé (trigger)      |
+| `/decisions`      | CRUD, filtres               | Nœuds vérifiés dans le snapshot ; `brouillon → validé → envoyé`, sans retour |
+
+Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui a des enfants.
+
 ## Conventions
 
-Voir [CLAUDE.md](CLAUDE.md). La règle ESLint `max-params: 1` impose les paramètres nommés (un seul argument objet).
+Voir [CLAUDE.md](CLAUDE.md). ESLint impose les paramètres nommés (`no-restricted-syntax`) : toute
+fonction, méthode ou fonction fléchée nommée reçoit au plus un argument objet. Les callbacks imposés
+par une API (`reduce`, `forEach`…) et les contrôleurs Nest (paramètres injectés par décorateur) sont exemptés.

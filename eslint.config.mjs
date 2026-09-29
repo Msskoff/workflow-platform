@@ -6,10 +6,28 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-/** Règles propres au projet, partagées par toutes les configs ESLint du monorepo. */
+const MESSAGE_PARAMETRES_NOMMES =
+  'Paramètres nommés : une fonction déclarée reçoit au plus un argument (un objet de paramètres).';
+
+/**
+ * Règles propres au projet, partagées par toutes les configs ESLint du monorepo.
+ * Les paramètres nommés sont imposés aux fonctions que l'on déclare (fonctions, méthodes,
+ * fonctions fléchées nommées), pas aux callbacks dont la signature est imposée par une API
+ * (`reduce`, `forEach`, `superRefine`…).
+ */
 export const projectRules = {
-  // Paramètres nommés : une fonction reçoit au plus un argument (un objet de paramètres).
-  'max-params': ['error', 1],
+  'no-restricted-syntax': [
+    'error',
+    { selector: 'FunctionDeclaration[params.length>1]', message: MESSAGE_PARAMETRES_NOMMES },
+    {
+      selector: "MethodDefinition[kind!='constructor'] > FunctionExpression[params.length>1]",
+      message: MESSAGE_PARAMETRES_NOMMES,
+    },
+    {
+      selector: 'VariableDeclarator > ArrowFunctionExpression[params.length>1]',
+      message: MESSAGE_PARAMETRES_NOMMES,
+    },
+  ],
 };
 
 export default defineConfig([
@@ -27,6 +45,11 @@ export default defineConfig([
       globals: { ...globals.node, ...globals.jest },
     },
     rules: projectRules,
+  },
+  {
+    // Les paramètres des contrôleurs Nest sont injectés par décorateur (@Param, @Body…).
+    files: ['**/*.controller.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   prettier,
 ]);
