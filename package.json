@@ -1,0 +1,36 @@
+{
+  "name": "workflow-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Éditeur de workflows exécutables pour l'agriculture de précision (outil interne).",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "npm run build -w @workflow/shared && concurrently --kill-others-on-fail -n shared,api,web -c blue,magenta,green \"npm run dev -w @workflow/shared\" \"npm run dev -w @workflow/api\" \"npm run dev -w @workflow/web\"",
+    "build": "npm run build -w @workflow/shared -w @workflow/api -w @workflow/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run build -w @workflow/shared && npm run test --workspaces --if-present",
+    "typecheck": "npm run build -w @workflow/shared && npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^10.0.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "jest": "^30.5.2",
+    "prettier": "^3.9.9",
+    "ts-jest": "^29.4.14",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

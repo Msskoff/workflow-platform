@@ -1,0 +1,27 @@
+# Dépendances
+node_modules/
+
+# Builds
+dist/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests
+coverage/
+
+# Environnement (seul .env.example est versionné)
+.env
+.env.*
+!.env.example
+
+# Logs et OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
