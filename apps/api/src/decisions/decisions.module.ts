@@ -9,5 +9,6 @@ import { RevueService } from './revue.service';
   imports: [NoeudsModule],
   controllers: [DecisionsController, RevueController],
   providers: [DecisionsService, RevueService],
+  exports: [DecisionsService],
 })
 export class DecisionsModule {}

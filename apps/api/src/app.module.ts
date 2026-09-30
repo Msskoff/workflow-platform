@@ -11,6 +11,7 @@ import { NoeudsModule } from './noeuds/noeuds.module';
 import { ParcellesModule } from './parcelles/parcelles.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RapportsModule } from './rapports/rapports.module';
+import { SuiviModule } from './suivi/suivi.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RapportsModule } from './rapports/rapports.module';
     ModelesModule,
     EspaceClientModule,
     RapportsModule,
+    SuiviModule,
   ],
 })
 export class AppModule {}

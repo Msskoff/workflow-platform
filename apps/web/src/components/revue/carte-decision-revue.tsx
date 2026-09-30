@@ -2,6 +2,8 @@
 
 import type { DecisionEnRevue, ModifierDecision } from '@workflow/shared';
 import { BadgePriorite } from '@/components/regles/badge-priorite';
+import { FormulairePrevu } from '@/components/suivi/formulaire-prevu';
+import { TableauPrevuReel } from '@/components/suivi/tableau-prevu-reel';
 import { ActionsDecision } from './actions-decision';
 import { BadgeStatutDecision } from './badge-statut-decision';
 import { DonneesSources } from './donnees-sources';
@@ -33,6 +35,8 @@ export function CarteDecisionRevue({
     { libelle: 'Produite', date: dateCourte({ iso: decision.creeLe }) },
     { libelle: 'Validée', date: dateCourte({ iso: decision.valideeLe }) },
     { libelle: 'Envoyée', date: dateCourte({ iso: decision.envoyeeLe }) },
+    { libelle: 'Appliquée', date: dateCourte({ iso: decision.appliqueeLe }) },
+    { libelle: 'Non appliquée', date: dateCourte({ iso: decision.nonAppliqueeLe }) },
     { libelle: 'Rejetée', date: dateCourte({ iso: decision.rejeteeLe }) },
   ].filter((jalon) => jalon.date);
 
@@ -65,6 +69,17 @@ export function CarteDecisionRevue({
       />
 
       <DonneesSources donnees={decision.donnees} chaine={chaine} />
+
+      {decision.statut === 'brouillon' || decision.statut === 'validé' ? (
+        <FormulairePrevu
+          key={decision.modifieLe}
+          prevu={decision.prevu}
+          enCours={enCours}
+          surEnregistrement={({ prevu }) => surModification({ donnees: { prevu } })}
+        />
+      ) : (
+        decision.statut !== 'rejeté' && <TableauPrevuReel decision={decision} />
+      )}
 
       {decision.motifRejet && (
         <p className="text-xs text-neutral-600">Motif du rejet : {decision.motifRejet}</p>

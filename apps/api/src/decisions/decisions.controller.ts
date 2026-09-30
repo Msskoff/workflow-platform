@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+} from '@nestjs/common';
 import {
   apiRoutes,
   creerDecisionSchema,
@@ -26,6 +38,14 @@ export class DecisionsController {
   @Get(':id')
   trouver(@Param('id') id: string): Promise<Decision> {
     return this.decisionsService.trouver({ id });
+  }
+
+  /** Photo jointe au réel d'une application (usage interne : écran de suivi). */
+  @Get(':id/photo')
+  @Header('Cache-Control', 'private, max-age=3600')
+  async photo(@Param('id') id: string): Promise<StreamableFile> {
+    const { contenu, type } = await this.decisionsService.photo({ id });
+    return new StreamableFile(contenu, { type });
   }
 
   @Post()

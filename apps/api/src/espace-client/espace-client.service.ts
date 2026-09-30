@@ -2,16 +2,19 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   decisionClientSchema,
   formaterNombre,
+  statutsVisiblesClient,
   vueEspaceClientSchema,
   vueParcelleClientSchema,
   type AnalysePubliee,
   type DecisionClient,
   type EvenementChronologie,
+  type MarquerFait,
   type VueEspaceClient,
   type VueParcelleClient,
 } from '@workflow/shared';
 import { introuvable } from '../common/erreurs';
 import { empreinteJeton } from '../common/jeton';
+import { DecisionsService } from '../decisions/decisions.service';
 import type { Client as ClientLigne } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RapportsService, type FichierPdf } from '../rapports/rapports.service';
@@ -29,6 +32,7 @@ export class EspaceClientService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rapports: RapportsService,
+    private readonly decisionsService: DecisionsService,
   ) {}
 
   async vue({ jeton }: { jeton: string }): Promise<VueEspaceClient> {
@@ -129,6 +133,20 @@ export class EspaceClientService {
         campagneId: decision.campagne.id,
         analyseId: decision.analyseId,
       })),
+      ...decisions.flatMap((decision) =>
+        decision.fait && decision.faitLe
+          ? [
+              {
+                date: decision.faitLe,
+                type: 'application' as const,
+                titre: `Fait : ${decision.recommandation ?? 'recommandation appliquée'}`,
+                detail: null,
+                campagneId: decision.campagne.id,
+                analyseId: decision.analyseId,
+              },
+            ]
+          : [],
+      ),
     ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return vueParcelleClientSchema.parse({
@@ -175,14 +193,15 @@ export class EspaceClientService {
     }
     const lignes = await this.prisma.decision.findMany({
       where: {
-        statut: 'envoyé',
+        statut: { in: [...statutsVisiblesClient] },
         execution: { campagne: { parcelle: { clientId, ...(parcelleId && { id: parcelleId }) } } },
       },
+      omit: { reelPhoto: true },
       include: { execution: { include: { campagne: { include: { parcelle: true } } } } },
       orderBy: { envoyeeLe: 'desc' },
     });
 
-    // Projection explicite : aucune donnée interne (nœuds, motif, statut) n'est exposée.
+    // Projection explicite : aucune donnée interne (nœuds, motifs, coûts, déclarant) n'est exposée.
     return lignes.map((ligne) =>
       decisionClientSchema.parse({
         id: ligne.id,
@@ -195,9 +214,63 @@ export class EspaceClientService {
         recommandation: ligne.recommandation,
         explication: ligne.explication,
         priorite: ligne.priorite,
+        prevu: {
+          produit: ligne.prevuProduit,
+          dose: ligne.prevuDose,
+          uniteDose: ligne.prevuUniteDose,
+          date: ligne.prevuDate,
+        },
         envoyeeLe: ligne.envoyeeLe?.toISOString(),
+        fait: ligne.statut === 'appliqué',
+        faitConfirme: ligne.statut === 'appliqué' && ligne.reelDate !== null,
+        faitLe:
+          ligne.statut === 'appliqué'
+            ? (ligne.reelDate ?? ligne.appliqueeLe?.toISOString() ?? null)
+            : null,
       }),
     );
+  }
+
+  /**
+   * Case « fait » cochée ou décochée par le fermier ou l'agent terrain. Seules les décisions
+   * de ce client déjà envoyées sont concernées ; décocher est refusé une fois le réel saisi
+   * par l'équipe (règles portées par `DecisionsService`).
+   */
+  async marquerFait({
+    jeton,
+    decisionId,
+    donnees,
+  }: {
+    jeton: string;
+    decisionId: string;
+    donnees: MarquerFait;
+  }): Promise<DecisionClient> {
+    const client = await this.resoudreClient({ jeton });
+    const ligne = await this.prisma.decision.findFirst({
+      where: {
+        id: decisionId,
+        statut: { in: [...statutsVisiblesClient] },
+        execution: { campagne: { parcelle: { clientId: client.id } } },
+      },
+      select: { statut: true },
+    });
+    if (!ligne) {
+      throw new NotFoundException('Recommandation introuvable');
+    }
+    const dejaFait = ligne.statut === 'appliqué';
+    if (donnees.fait !== dejaFait) {
+      await this.decisionsService.modifier({
+        id: decisionId,
+        donnees: { statut: donnees.fait ? 'appliqué' : 'envoyé' },
+        declarant: 'espace_client',
+      });
+    }
+    const decisions = await this.decisionsEnvoyees({ clientId: client.id });
+    const decision = decisions.find((candidate) => candidate.id === decisionId);
+    if (!decision) {
+      throw new NotFoundException('Recommandation introuvable');
+    }
+    return decision;
   }
 
   private async resoudreClient({ jeton }: { jeton: string }): Promise<ClientLigne> {
@@ -222,7 +295,7 @@ export class EspaceClientService {
       where: {
         statut: 'terminee',
         campagne: { parcelleId },
-        decisions: { some: { statut: 'envoyé' } },
+        decisions: { some: { statut: { in: [...statutsVisiblesClient] } } },
       },
       include: { noeuds: true },
       orderBy: { termineeLe: 'desc' },

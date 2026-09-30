@@ -4,6 +4,8 @@ const STYLES: Readonly<Record<StatutDecision, string>> = {
   brouillon: 'bg-amber-100 text-amber-800',
   validé: 'bg-sky-100 text-sky-800',
   envoyé: 'bg-emerald-100 text-emerald-800',
+  appliqué: 'bg-emerald-700 text-white',
+  non_appliqué: 'bg-amber-100 text-amber-900',
   rejeté: 'bg-neutral-200 text-neutral-600',
 };
 

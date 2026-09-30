@@ -102,7 +102,7 @@ export default async function ParcelleClientPage({
                 <DecisionsClient decisions={decisionsAnalyse} />
               </SectionEspace>
               <SectionEspace titre="Vos prochaines actions">
-                <ActionsASuivre decisions={decisionsAnalyse} />
+                <ActionsASuivre jeton={jeton} decisions={decisionsAnalyse} />
               </SectionEspace>
             </div>
 

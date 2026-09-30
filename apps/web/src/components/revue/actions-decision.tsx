@@ -102,11 +102,11 @@ export function ActionsDecision({
     );
   }
 
-  return (
-    <p className="text-xs text-neutral-500">
-      {statut === 'envoyé'
-        ? 'Visible dans l’espace client.'
-        : 'Rejetée : jamais visible par le client.'}
-    </p>
-  );
+  const messages: Partial<Record<StatutDecision, string>> = {
+    envoyé: 'Visible dans l’espace client. Application à suivre dans « Suivi de campagne ».',
+    appliqué: 'Appliquée : détail prévu/réel dans « Suivi de campagne ».',
+    non_appliqué: 'Non appliquée : motif dans « Suivi de campagne ».',
+    rejeté: 'Rejetée : jamais visible par le client.',
+  };
+  return <p className="text-xs text-neutral-500">{messages[statut]}</p>;
 }

@@ -14,6 +14,8 @@ export const apiRoutes = {
   modeles: '/modeles',
   /** Lecture seule pour l'espace client : décisions envoyées uniquement. */
   espaceClient: '/espace-client',
+  /** Suivi de campagne interne : conseillé, appliqué, reste à faire. */
+  suiviCampagnes: '/suivi/campagnes',
 } as const;
 
 /** Sous-chemin de lancement d'une exécution : `POST /executions/:id/lancer`. */

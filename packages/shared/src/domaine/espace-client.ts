@@ -45,7 +45,13 @@ export const analysePublieeSchema = z.object({
 
 export type AnalysePubliee = z.infer<typeof analysePublieeSchema>;
 
-export const typesEvenement = ['debut_campagne', 'analyse', 'decision', 'fin_campagne'] as const;
+export const typesEvenement = [
+  'debut_campagne',
+  'analyse',
+  'decision',
+  'application',
+  'fin_campagne',
+] as const;
 
 /** Étape de la saison, affichée dans la chronologie. */
 export const evenementChronologieSchema = z.object({
@@ -82,3 +88,8 @@ export const accesClientSchema = z.object({
 });
 
 export type AccesClient = z.infer<typeof accesClientSchema>;
+
+/** Case « fait » cochée ou décochée par le fermier (ou l'agent terrain) dans son espace. */
+export const marquerFaitSchema = z.object({ fait: z.boolean() });
+
+export type MarquerFait = z.infer<typeof marquerFaitSchema>;

@@ -3,6 +3,7 @@ import {
   prioriteDecisionSchema,
   rangPriorite,
   rapportParcelleSchema,
+  statutsVisiblesClient,
   workflowSnapshotSchema,
   type RapportParcelle,
   type StatutDecision,
@@ -68,12 +69,16 @@ export class RapportsService {
 
   /** Aperçu interne : décisions validées ou envoyées. */
   apercu({ executionId }: { executionId: string }): Promise<FichierPdf> {
-    return this.pdf({ executionId, statuts: ['validé', 'envoyé'], destination: 'apercu' });
+    return this.pdf({
+      executionId,
+      statuts: ['validé', ...statutsVisiblesClient],
+      destination: 'apercu',
+    });
   }
 
   /** Version client : décisions envoyées uniquement. */
   versionClient({ executionId }: { executionId: string }): Promise<FichierPdf> {
-    return this.pdf({ executionId, statuts: ['envoyé'], destination: 'client' });
+    return this.pdf({ executionId, statuts: statutsVisiblesClient, destination: 'client' });
   }
 
   private async pdf(params: RapportExecutionParams): Promise<FichierPdf> {
@@ -95,7 +100,11 @@ export class RapportsService {
       include: {
         noeuds: true,
         campagne: { include: { parcelle: { include: { client: true } } } },
-        decisions: { where: { statut: { in: [...statuts] } }, orderBy: { creeLe: 'asc' } },
+        decisions: {
+          omit: { reelPhoto: true },
+          where: { statut: { in: [...statuts] } },
+          orderBy: { creeLe: 'asc' },
+        },
       },
     });
     if (!execution) {

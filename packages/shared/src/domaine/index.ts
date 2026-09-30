@@ -19,4 +19,5 @@ export * from './workflow-snapshot';
 export * from './modele-workflow';
 export * from './execution-workflow';
 export * from './decision';
+export * from './suivi-campagne';
 export * from './espace-client';

@@ -105,13 +105,29 @@ comparaison), régénérables par `node scripts/generer-image-exemple.mjs` depui
 
 ## Revue des décisions
 
-- Cycle : `brouillon → validé → envoyé`, ou `brouillon → rejeté` (avec un motif interne facultatif).
-  Pas de retour en arrière ; l'explication n'est modifiable qu'en brouillon.
+- Cycle complet d'une recommandation : `brouillon → validé → envoyé → appliqué | non_appliqué`, ou
+  `brouillon → rejeté` (motif interne facultatif). `non_appliqué` exige un motif. Deux corrections
+  de terrain seulement : `non_appliqué → appliqué` (appliquée plus tard) et `appliqué → envoyé`
+  (case « fait » décochée, refusé une fois le réel saisi). L'explication n'est modifiable qu'en
+  brouillon, le **prévu** (produit, dose, unité, date, coût estimé) jusqu'à l'envoi.
 - Écran interne `/revue` : décisions par statut et par client, avec le « pourquoi », la mesure et la
   condition qui l'ont motivée, la chaîne des nœuds, et les actions valider, rejeter, modifier
-  l'explication et envoyer (avec confirmation).
+  l'explication, saisir le prévu et envoyer (avec confirmation).
 - Chaque carte de décision propose l'**aperçu du rapport PDF** de son exécution
   (`GET /executions/:id/rapport.pdf` : décisions validées et envoyées, bandeau « Aperçu interne »).
+
+## Suivi de campagne
+
+- Écran interne `/suivi` : chaque campagne (client · parcelle) avec son taux d'application, puis
+  `/suivi/:campagneId` : **reste à faire**, **appliqué**, **non appliqué**, prévu et réel côte à côte.
+- Actions : saisir l'application (volet **réel** : produit, dose, date, coût, photo facultative
+  réduite dans le navigateur à 1280 px en JPEG), déclarer non appliquée avec un motif, corriger le
+  réel, annuler une application sans réel.
+- Indicateurs (fonction partagée `calculerIndicateursSuivi`) : taux d'application (appliquées /
+  conseillées), écart de coût prévu/réel (sommes sur les décisions ayant les deux), écart de dose moyen
+  (à unité identique).
+- API : `GET /suivi/campagnes`, `GET /suivi/campagnes/:id`, `PATCH /decisions/:id` (prévu, réel,
+  statut), `GET /decisions/:id/photo`.
 
 ## Rapport PDF et espace client
 
@@ -128,7 +144,11 @@ comparaison), régénérables par `node scripts/generer-image-exemple.mjs` depui
   légende, chiffres clés, recommandations avec leur « pourquoi », actions à suivre, comparaison de deux
   analyses, chronologie de la saison et téléchargement du PDF.
 - Le client ne voit que les analyses **publiées** (exécution terminée avec un rapport et au moins une
-  décision `envoyé`) et, dans celles-ci, uniquement les décisions `envoyé`.
+  décision envoyée) et, dans celles-ci, uniquement les décisions `envoyé`, `appliqué` ou
+  `non_appliqué` (sans motifs ni coûts).
+- **Case « fait »** : seule écriture de l'espace client. Le fermier ou l'agent terrain coche une
+  action une fois faite (`POST /espace-client/:jeton/decisions/:id/fait`) ; l'équipe la voit dans le
+  suivi et complète le réel. Une fois le réel saisi par l'équipe, la case est verrouillée.
 - API : `GET /espace-client/:jeton`, `GET /espace-client/:jeton/parcelles/:id`,
   `GET /espace-client/:jeton/parcelles/:id/rapport.pdf?analyse=` (jeton inconnu ou révoqué : 404).
 

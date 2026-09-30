@@ -3,6 +3,7 @@ import {
   apiRoutes,
   campagneSchema,
   clientSchema,
+  decisionClientSchema,
   decisionEnRevueSchema,
   decisionSchema,
   executionWorkflowSchema,
@@ -15,6 +16,7 @@ import {
   type Client,
   type CreerModele,
   type Decision,
+  type DecisionClient,
   type DecisionEnRevue,
   type ExecutionWorkflow,
   type GeometrieParcelle,
@@ -169,7 +171,7 @@ export function listerDecisionsEnRevue({
   });
 }
 
-/** Valider, rejeter, envoyer ou modifier l'explication d'une décision. */
+/** Valider, rejeter, envoyer, modifier l'explication, le prévu ou le réel d'une décision. */
 export function modifierDecision({
   id,
   donnees,
@@ -255,5 +257,23 @@ export function genererAccesClient({ clientId }: { clientId: string }): Promise<
     methode: 'POST',
     chemin: `${apiRoutes.clients}/${clientId}/acces`,
     schema: accesClientSchema,
+  });
+}
+
+/** Case « fait » d'une recommandation, cochée depuis l'espace client (fermier ou agent). */
+export function marquerFait({
+  jeton,
+  decisionId,
+  fait,
+}: {
+  jeton: string;
+  decisionId: string;
+  fait: boolean;
+}): Promise<DecisionClient> {
+  return appeler({
+    methode: 'POST',
+    chemin: `${apiRoutes.espaceClient}/${encodeURIComponent(jeton)}/decisions/${encodeURIComponent(decisionId)}/fait`,
+    corps: { fait },
+    schema: decisionClientSchema,
   });
 }

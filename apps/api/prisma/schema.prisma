@@ -142,15 +142,41 @@ model Decision {
   priorite       String?
   /// Données qui ont motivé la décision : indicateur, valeur, condition, nœud source.
   donnees        Json?
-  /// brouillon | validé | envoyé | rejeté (seul envoyé est visible dans l'espace client)
+  /// brouillon | validé | envoyé | appliqué | non_appliqué | rejeté
+  /// (envoyé, appliqué et non_appliqué sont visibles dans l'espace client)
   statut         String            @default("brouillon")
   valideeLe      DateTime?
   envoyeeLe      DateTime?
   rejeteeLe      DateTime?
   /// Raison du rejet, usage interne.
   motifRejet     String?
-  creeLe         DateTime          @default(now())
-  modifieLe      DateTime          @updatedAt
+
+  /// Volet « prévu », renseigné avant l'envoi. Date au format AAAA-MM-JJ, coût en euros.
+  prevuProduit    String?
+  prevuDose       Float?
+  prevuUniteDose  String?
+  prevuDate       String?
+  prevuCoutEstime Float?
+
+  /// Volet « réel », saisi après application (reelDate non nulle = réel saisi).
+  reelProduit   String?
+  reelDose      Float?
+  reelUniteDose String?
+  reelDate      String?
+  reelCout      Float?
+  reelPhoto     Bytes?
+  /// image/jpeg | image/png | image/webp
+  reelPhotoType String?
+
+  appliqueeLe            DateTime?
+  /// equipe | espace_client
+  applicationDeclareePar String?
+  nonAppliqueeLe         DateTime?
+  /// Raison de la non-application, usage interne.
+  motifNonApplication    String?
+
+  creeLe    DateTime @default(now())
+  modifieLe DateTime @updatedAt
 
   @@index([executionId, statut])
 }

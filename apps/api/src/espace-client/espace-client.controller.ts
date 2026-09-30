@@ -1,9 +1,27 @@
-import { Controller, Get, Param, Query, StreamableFile } from '@nestjs/common';
-import { apiRoutes, type VueEspaceClient, type VueParcelleClient } from '@workflow/shared';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  StreamableFile,
+} from '@nestjs/common';
+import {
+  apiRoutes,
+  marquerFaitSchema,
+  type DecisionClient,
+  type MarquerFait,
+  type VueEspaceClient,
+  type VueParcelleClient,
+} from '@workflow/shared';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { EspaceClientService } from './espace-client.service';
 
 /**
- * Espace client, lecture seule. L'accès se fait par le jeton du lien envoyé au client :
+ * Espace client, en lecture seule à une exception près : la case « fait » d'une
+ * recommandation, que le fermier ou l'agent terrain coche après application. L'accès se fait par le jeton du lien envoyé au client :
  * pas de compte ni de mot de passe, et le lien se révoque en en générant un nouveau.
  */
 @Controller(apiRoutes.espaceClient)
@@ -38,5 +56,15 @@ export class EspaceClientController {
       type: 'application/pdf',
       disposition: `attachment; filename="${nomFichier}"`,
     });
+  }
+
+  @Post(':jeton/decisions/:decisionId/fait')
+  @HttpCode(200)
+  marquerFait(
+    @Param('jeton') jeton: string,
+    @Param('decisionId') decisionId: string,
+    @Body(new ZodValidationPipe({ schema: marquerFaitSchema })) donnees: MarquerFait,
+  ): Promise<DecisionClient> {
+    return this.espaceClientService.marquerFait({ jeton, decisionId, donnees });
   }
 }

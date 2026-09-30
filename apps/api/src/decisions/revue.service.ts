@@ -8,7 +8,7 @@ import {
 import { enIsoOuNull } from '../common/dates';
 import { RegistreNoeuds } from '../noeuds/registre-noeuds';
 import { PrismaService } from '../prisma/prisma.service';
-import { versDecision } from './decisions.mapper';
+import { SANS_PHOTO, versDecision } from './decisions.mapper';
 
 const INCLURE_CONTEXTE = {
   execution: { include: { campagne: { include: { parcelle: { include: { client: true } } } } } },
@@ -27,6 +27,7 @@ export class RevueService {
 
   async lister({ filtre }: { filtre: FiltreRevue }): Promise<DecisionEnRevue[]> {
     const lignes = await this.prisma.decision.findMany({
+      ...SANS_PHOTO,
       where: {
         statut: filtre.statut,
         ...(filtre.clientId && {

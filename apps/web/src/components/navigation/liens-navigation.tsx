@@ -3,6 +3,7 @@ import Link from 'next/link';
 const LIENS = [
   { href: '/editeur', libelle: 'Éditeur de workflow' },
   { href: '/revue', libelle: 'Revue des décisions' },
+  { href: '/suivi', libelle: 'Suivi de campagne' },
   { href: '/clients', libelle: 'Clients' },
 ] as const;
 

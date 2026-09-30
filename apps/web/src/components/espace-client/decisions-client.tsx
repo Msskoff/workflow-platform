@@ -1,4 +1,10 @@
 import { libellesPrioriteClient, type DecisionClient } from '@workflow/shared';
+import { formaterDose, formaterJour } from '@/lib/suivi/format-suivi';
+
+/** Date calendaire (AAAA-MM-JJ) ou horodatage → « 2 oct. 2026 ». */
+function formaterJourOuMoment({ date }: { date: string }): string {
+  return formaterJour({ date: date.slice(0, 10) });
+}
 
 const STYLES_PRIORITE = {
   haute: 'bg-red-50 text-red-800 ring-red-200',
@@ -29,18 +35,38 @@ export function DecisionsClient({ decisions }: DecisionsClientProps) {
             <h3 className="font-semibold text-neutral-900">
               {index + 1}. {decision.recommandation ?? 'Recommandation'}
             </h3>
-            {decision.priorite && (
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${STYLES_PRIORITE[decision.priorite]}`}
-              >
-                {libellesPrioriteClient[decision.priorite]}
+            {decision.fait ? (
+              <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-xs font-medium text-white">
+                Fait
+                {decision.faitLe ? ` le ${formaterJourOuMoment({ date: decision.faitLe })}` : ''}
               </span>
+            ) : (
+              decision.priorite && (
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${STYLES_PRIORITE[decision.priorite]}`}
+                >
+                  {libellesPrioriteClient[decision.priorite]}
+                </span>
+              )
             )}
           </div>
           <p className="mt-2 text-sm text-neutral-700">
             <span className="font-semibold">Pourquoi ? </span>
             {decision.explication}
           </p>
+          {(decision.prevu.produit || decision.prevu.dose !== null || decision.prevu.date) && (
+            <p className="mt-1 text-sm text-neutral-700">
+              <span className="font-semibold">Prévu : </span>
+              {[
+                decision.prevu.produit,
+                decision.prevu.dose !== null &&
+                  formaterDose({ dose: decision.prevu.dose, unite: decision.prevu.uniteDose }),
+                decision.prevu.date && `vers le ${formaterJour({ date: decision.prevu.date })}`,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+          )}
         </li>
       ))}
     </ol>

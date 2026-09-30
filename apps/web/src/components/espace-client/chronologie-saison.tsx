@@ -9,6 +9,7 @@ const PASTILLES: Readonly<Record<EvenementChronologie['type'], string>> = {
   debut_campagne: 'bg-emerald-700',
   analyse: 'bg-sky-600',
   decision: 'bg-amber-500',
+  application: 'bg-emerald-500',
   fin_campagne: 'bg-neutral-500',
 };
 
@@ -16,6 +17,7 @@ const LIBELLES_TYPE: Readonly<Record<EvenementChronologie['type'], string>> = {
   debut_campagne: 'Début de saison',
   analyse: 'Analyse',
   decision: 'Recommandation',
+  application: 'Fait',
   fin_campagne: 'Fin de saison',
 };
 
@@ -28,7 +30,7 @@ interface ChronologieSaisonProps {
   hrefParcelle: string;
 }
 
-/** Frise de la saison, campagne par campagne : semis, analyses, recommandations. */
+/** Frise de la saison, campagne par campagne : semis, analyses, recommandations, applications. */
 export function ChronologieSaison({
   campagnes,
   evenements,
