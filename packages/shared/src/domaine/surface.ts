@@ -49,3 +49,36 @@ export function calculerSurfaceHa({ geometrie }: CalculerSurfaceHaParams): numbe
   const aireM2 = polygones.reduce((total, polygone) => total + airePolygoneM2(polygone), 0);
   return Math.round((aireM2 / M2_PAR_HECTARE) * 10_000) / 10_000;
 }
+
+/** Distance du grand cercle entre deux positions WGS84, en mètres (formule de haversine). */
+function distanceM({ depuis, vers }: { depuis: Position; vers: Position }): number {
+  const dLat = enRadians(vers[1] - depuis[1]);
+  const dLon = enRadians(vers[0] - depuis[0]);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(enRadians(depuis[1])) * Math.cos(enRadians(vers[1])) * Math.sin(dLon / 2) ** 2;
+  return 2 * RAYON_TERRE_M * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * Périmètre d'une géométrie de parcelle en mètres, arrondi au centimètre.
+ * Tous les anneaux sont comptés : contour extérieur et bords des trous.
+ */
+export function calculerPerimetreM({ geometrie }: CalculerSurfaceHaParams): number {
+  const polygones = geometrie.type === 'Polygon' ? [geometrie.coordinates] : geometrie.coordinates;
+  const longueur = polygones
+    .flat()
+    .reduce(
+      (total, anneau) =>
+        total +
+        anneau
+          .slice(1)
+          .reduce(
+            (somme, position, index) =>
+              somme + distanceM({ depuis: anneau[index] ?? position, vers: position }),
+            0,
+          ),
+      0,
+    );
+  return Math.round(longueur * 100) / 100;
+}

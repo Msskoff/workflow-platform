@@ -26,6 +26,7 @@
     "@turf/kinks": "^7.4.0",
     "@workflow/shared": "*",
     "better-sqlite3": "^12.11.1",
+    "geotiff": "^3.0.5",
     "proj4": "^2.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

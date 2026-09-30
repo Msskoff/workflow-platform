@@ -14,26 +14,51 @@ export const categorieNoeudSchema = z.enum(categoriesNoeud);
 
 export type CategorieNoeud = z.infer<typeof categorieNoeudSchema>;
 
+/** Indicateur publié par une sortie de type `indicateurs` (clé, libellé, unité). */
+export interface IndicateurDefinition {
+  cle: string;
+  libelle: string;
+  unite?: string;
+}
+
 /** Port d'entrée ou de sortie d'un nœud. */
 export interface PortDefinition {
   type: TypeDonnee;
   libelle: string;
   /** Entrée facultative : peut rester non connectée. Ignoré pour les sorties. */
   optionnel?: boolean;
+  /**
+   * Entrée qui accepte plusieurs connexions : le nœud reçoit alors un tableau des valeurs,
+   * dans l'ordre des connexions. Ignoré pour les sorties.
+   */
+  multiple?: boolean;
+  /** Sorties de type `indicateurs` : indicateurs produits, proposés dans l'éditeur de règles. */
+  indicateurs?: readonly IndicateurDefinition[];
 }
 
 /** Ports d'un nœud, indexés par nom de port. */
 export type PortsDefinition = Readonly<Record<string, PortDefinition>>;
 
+/**
+ * Valeur reçue sur un port : un tableau pour une entrée déclarée `multiple: true`, une valeur
+ * seule sinon. Pour un port quelconque (registre, moteur), les deux formes sont possibles.
+ */
+type ValeurPort<Port extends PortDefinition> = Port extends { multiple: true }
+  ? ValeurDonnee<Port['type']>[]
+  : // `type` évite la règle des types « faibles » (propriétés toutes optionnelles).
+    Port extends { type: TypeDonnee; multiple?: false }
+    ? ValeurDonnee<Port['type']>
+    : ValeurDonnee<Port['type']> | ValeurDonnee<Port['type']>[];
+
 type PortsObligatoires<Ports extends PortsDefinition> = {
-  [Nom in keyof Ports as Ports[Nom]['optionnel'] extends true ? never : Nom]: ValeurDonnee<
-    Ports[Nom]['type']
+  [Nom in keyof Ports as Ports[Nom]['optionnel'] extends true ? never : Nom]: ValeurPort<
+    Ports[Nom]
   >;
 };
 
 type PortsOptionnels<Ports extends PortsDefinition> = {
-  [Nom in keyof Ports as Ports[Nom]['optionnel'] extends true ? Nom : never]?: ValeurDonnee<
-    Ports[Nom]['type']
+  [Nom in keyof Ports as Ports[Nom]['optionnel'] extends true ? Nom : never]?: ValeurPort<
+    Ports[Nom]
   >;
 };
 
@@ -91,10 +116,18 @@ export function defineNode<
   return definition;
 }
 
+export const indicateurDefinitionSchema = z.object({
+  cle: z.string(),
+  libelle: z.string(),
+  unite: z.string().optional(),
+});
+
 export const portDefinitionSchema = z.object({
   type: typeDonneeSchema,
   libelle: z.string(),
   optionnel: z.boolean().optional(),
+  multiple: z.boolean().optional(),
+  indicateurs: z.array(indicateurDefinitionSchema).optional(),
 });
 
 /**

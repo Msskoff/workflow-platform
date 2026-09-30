@@ -1,6 +1,7 @@
 'use client';
 
 import { avecPropriete, type SchemaJson, type ValeursObjet } from '@/lib/formulaire/schema-json';
+import { ChampFichierBinaire } from './champ-fichier-binaire';
 import { ChampFichierTexte } from './champ-fichier-texte';
 import { ChampSchema } from './champ-schema';
 
@@ -19,10 +20,12 @@ export function GroupeChamps({ schema, valeur, surChangement }: GroupeChampsProp
         if (propriete.widget === 'masque') {
           return null;
         }
-        if (propriete.widget === 'fichier-texte') {
+        if (propriete.widget === 'fichier-texte' || propriete.widget === 'fichier-binaire') {
+          const ChampFichier =
+            propriete.widget === 'fichier-texte' ? ChampFichierTexte : ChampFichierBinaire;
           const champNom = propriete.champNomFichier;
           return (
-            <ChampFichierTexte
+            <ChampFichier
               key={nom}
               nom={nom}
               schema={propriete}

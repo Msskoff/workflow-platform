@@ -1,6 +1,10 @@
 'use client';
 
 import type { NoeudWorkflow } from '@workflow/shared';
+import {
+  FournisseurParametres,
+  type IndicateurDisponible,
+} from '@/components/parametres/contexte-parametres';
 import { GroupeChamps } from '@/components/parametres/groupe-champs';
 import { couleursCategorie, type NoeudEditeur } from '@/lib/editeur/graphe-editeur';
 import type { SchemaJson } from '@/lib/formulaire/schema-json';
@@ -9,11 +13,17 @@ import { BadgeStatutNoeud } from './badge-statut-noeud';
 
 interface PanneauNoeudProps {
   noeud: NoeudEditeur | null;
+  /** Indicateurs publiés par les nœuds connectés en entrée (pour l'éditeur de règles). */
+  indicateursDisponibles: readonly IndicateurDisponible[];
   surChangementParametres: (params: { parametres: NoeudWorkflow['parametres'] }) => void;
 }
 
 /** Panneau latéral : paramètres du nœud sélectionné et résultat de sa dernière exécution. */
-export function PanneauNoeud({ noeud, surChangementParametres }: PanneauNoeudProps) {
+export function PanneauNoeud({
+  noeud,
+  indicateursDisponibles,
+  surChangementParametres,
+}: PanneauNoeudProps) {
   if (!noeud) {
     return (
       <aside className="w-80 shrink-0 border-l border-neutral-200 bg-white p-4 text-sm text-neutral-500">
@@ -51,13 +61,15 @@ export function PanneauNoeud({ noeud, surChangementParametres }: PanneauNoeudPro
           Paramètres
         </h3>
         {aDesParametres ? (
-          <GroupeChamps
-            schema={schema}
-            valeur={parametres}
-            surChangement={({ valeur }) =>
-              surChangementParametres({ parametres: valeur as NoeudWorkflow['parametres'] })
-            }
-          />
+          <FournisseurParametres value={{ indicateursDisponibles }}>
+            <GroupeChamps
+              schema={schema}
+              valeur={parametres}
+              surChangement={({ valeur }) =>
+                surChangementParametres({ parametres: valeur as NoeudWorkflow['parametres'] })
+              }
+            />
+          </FournisseurParametres>
         ) : (
           <p className="text-xs text-neutral-500">Ce nœud n’a pas de paramètre.</p>
         )}

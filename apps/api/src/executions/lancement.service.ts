@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
-import type { ExecutionWorkflow, StatutNoeud } from '@workflow/shared';
+import { creerDecisionSchema, type ExecutionWorkflow, type StatutNoeud } from '@workflow/shared';
+import { extraireDecisions } from '../moteur/extraire-decisions';
 import {
   executerWorkflow,
   type ObservateurExecution,
@@ -20,6 +21,7 @@ interface MiseAJourEtatNoeud {
 /**
  * Fait tourner le moteur sur une exécution et enregistre au fil de l'eau l'état de
  * chaque nœud (`en_attente → en_cours → ok | erreur`), que le front lit par polling.
+ * En fin d'exécution réussie, les décisions des règles métier sont créées en brouillon.
  */
 @Injectable()
 export class LancementService {
@@ -66,6 +68,9 @@ export class LancementService {
         contexte: { executionId: id, campagneId },
         observateur: this.observateur({ executionId: id }),
       });
+      if (resultat.statut === 'ok') {
+        await this.enregistrerDecisions({ execution, sorties: resultat.sorties });
+      }
       await this.executions.modifier({
         id,
         donnees:
@@ -77,6 +82,40 @@ export class LancementService {
       const message = erreur instanceof Error ? erreur.message : String(erreur);
       await this.executions.modifier({ id, donnees: { statut: 'echouee', erreur: message } });
     }
+  }
+
+  /**
+   * Enregistre en brouillon les décisions des règles déclenchées. Seulement après une
+   * exécution réussie : une exécution échouée ne produit aucune décision.
+   */
+  private async enregistrerDecisions({
+    execution,
+    sorties,
+  }: {
+    execution: ExecutionWorkflow;
+    sorties: Record<string, ValeursParPort>;
+  }): Promise<void> {
+    const decisions = extraireDecisions({
+      graphe: execution.snapshot,
+      registre: this.registre,
+      sorties,
+    });
+    if (decisions.length === 0) {
+      return;
+    }
+    await this.prisma.decision.createMany({
+      data: decisions.map((decision) => {
+        const valide = creerDecisionSchema.parse({ executionId: execution.id, ...decision });
+        return {
+          executionId: valide.executionId,
+          noeudIds: valide.noeudIds,
+          explication: valide.explication,
+          recommandation: valide.recommandation ?? null,
+          priorite: valide.priorite ?? null,
+          donnees: decision.donnees,
+        };
+      }),
+    });
   }
 
   /** Observateur qui enregistre chaque changement d'état de nœud en base. */

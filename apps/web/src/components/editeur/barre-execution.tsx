@@ -17,8 +17,10 @@ interface BarreExecutionProps {
   surLancement: () => void;
   enCours: boolean;
   execution: ExecutionWorkflow | null;
-  /** Problèmes bloquants : validation locale du graphe ou erreurs de l'API. */
-  problemes: readonly string[];
+  /** Problèmes du graphe (validation locale) : empêchent de lancer l'exécution. */
+  bloquants: readonly string[];
+  /** Erreurs renvoyées par l'API au dernier essai : affichées, sans bloquer un nouvel essai. */
+  erreurs: readonly string[];
   /** Raison du dernier refus de connexion dans l'éditeur. */
   messageConnexion: string | null;
 }
@@ -32,10 +34,12 @@ export function BarreExecution({
   surLancement,
   enCours,
   execution,
-  problemes,
+  bloquants,
+  erreurs,
   messageConnexion,
 }: BarreExecutionProps) {
-  const executable = campagneId !== '' && problemes.length === 0 && !enCours;
+  const executable = campagneId !== '' && bloquants.length === 0 && !enCours;
+  const problemes = [...bloquants, ...erreurs];
 
   return (
     <div className="space-y-2 border-b border-neutral-200 bg-white px-4 py-2">

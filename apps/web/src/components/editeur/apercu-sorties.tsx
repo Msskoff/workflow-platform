@@ -1,19 +1,66 @@
 import {
+  devisSchema,
   geometrieGeoreferenceeSchema,
+  indicateursSchema,
   rapportQualiteSchema,
+  rasterNdviSchema,
+  resultatReglesSchema,
   typesDonnees,
+  zonageSchema,
   type DescripteurNoeud,
   type EtatNoeud,
 } from '@workflow/shared';
+import { VueDecisions } from './vue-decisions';
+import { VueDevis } from './vue-devis';
+import { VueIndicateurs } from './vue-indicateurs';
 import { VueRapportQualite } from './vue-rapport-qualite';
+import { VueRasterNdvi } from './vue-raster-ndvi';
+import { VueZonage } from './vue-zonage';
 
 interface ApercuValeurProps {
   type: DescripteurNoeud['sorties'][string]['type'];
   valeur: unknown;
 }
 
-/** Affichage adapté au type de données : rapport lisible, résumé de géométrie, sinon JSON. */
+/** Affichage adapté au type de données (carte, tableau, rapport…), sinon JSON brut. */
 function ApercuValeur({ type, valeur }: ApercuValeurProps) {
+  switch (type) {
+    case 'raster_ndvi': {
+      const raster = rasterNdviSchema.safeParse(valeur);
+      if (raster.success) {
+        return <VueRasterNdvi raster={raster.data} />;
+      }
+      break;
+    }
+    case 'zonage': {
+      const zonage = zonageSchema.safeParse(valeur);
+      if (zonage.success) {
+        return <VueZonage zonage={zonage.data} />;
+      }
+      break;
+    }
+    case 'indicateurs': {
+      const indicateurs = indicateursSchema.safeParse(valeur);
+      if (indicateurs.success) {
+        return <VueIndicateurs indicateurs={indicateurs.data} />;
+      }
+      break;
+    }
+    case 'decisions': {
+      const resultat = resultatReglesSchema.safeParse(valeur);
+      if (resultat.success) {
+        return <VueDecisions resultat={resultat.data} />;
+      }
+      break;
+    }
+    case 'devis': {
+      const devis = devisSchema.safeParse(valeur);
+      if (devis.success) {
+        return <VueDevis devis={devis.data} />;
+      }
+      break;
+    }
+  }
   if (type === 'rapport_qualite') {
     const rapport = rapportQualiteSchema.safeParse(valeur);
     if (rapport.success) {

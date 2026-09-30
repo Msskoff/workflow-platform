@@ -28,6 +28,7 @@ import {
   creerNoeud,
   grapheDemo,
   idConnexion,
+  indicateursEnAmont,
   TYPE_NOEUD_EDITEUR,
   versGraphe,
   type DonneesNoeudEditeur,
@@ -164,6 +165,12 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
     return selectionnes.length === 1 ? (selectionnes[0] ?? null) : null;
   }, [noeudsAffiches]);
 
+  const indicateursDisponibles = useMemo(
+    () =>
+      noeudSelectionne ? indicateursEnAmont({ noeudId: noeudSelectionne.id, noeuds, aretes }) : [],
+    [noeudSelectionne, noeuds, aretes],
+  );
+
   const modifierParametres = useCallback(
     ({ parametres }: { parametres: DonneesNoeudEditeur['parametres'] }) => {
       if (!noeudSelectionne) {
@@ -190,7 +197,8 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
         surLancement={executer}
         enCours={enCours}
         execution={execution}
-        problemes={[...erreursGraphe, ...erreursExecution, ...erreursCampagne]}
+        bloquants={erreursGraphe}
+        erreurs={[...erreursExecution, ...erreursCampagne]}
         messageConnexion={messageConnexion}
       />
       <div className="flex min-h-0 flex-1">
@@ -212,7 +220,11 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
             <Controls />
           </ReactFlow>
         </div>
-        <PanneauNoeud noeud={noeudSelectionne} surChangementParametres={modifierParametres} />
+        <PanneauNoeud
+          noeud={noeudSelectionne}
+          indicateursDisponibles={indicateursDisponibles}
+          surChangementParametres={modifierParametres}
+        />
       </div>
     </div>
   );

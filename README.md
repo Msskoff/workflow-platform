@@ -73,16 +73,29 @@ Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui
 - **Éditeur** : <http://localhost:3000/editeur>. Un clic sur un nœud ouvre le panneau latéral de ses
   paramètres (formulaire généré depuis le schéma Zod du nœud) et le résultat de sa dernière exécution.
 
-| Nœud               | Id                                 | Rôle                                                                        |
-| ------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
-| Import GPS         | `collecte.import_gps`              | GeoJSON (points, trace, polygone) ou CSV de points → contour de parcelle    |
-| Formulaire terrain | `collecte.formulaire_terrain`      | Culture, sol, irrigation, historique, photos (métadonnées uniquement)       |
-| Reprojection       | `standardisation.reprojection`     | Vers Lambert-93, UTM 30/31/32N, LAEA Europe, Web Mercator ou WGS 84 (proj4) |
-| Contrôle qualité   | `standardisation.controle_qualite` | Géométrie invalide, données manquantes → rapport (erreurs, avertissements)  |
-| Nombre / Seuil     | `factice.*`                        | Nœuds de démonstration du moteur                                            |
+| Nœud                 | Id                                 | Rôle                                                                           |
+| -------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| Import GPS           | `collecte.import_gps`              | GeoJSON (points, trace, polygone) ou CSV de points → contour de parcelle       |
+| Formulaire terrain   | `collecte.formulaire_terrain`      | Culture, sol, irrigation, historique, photos (métadonnées uniquement)          |
+| Reprojection         | `standardisation.reprojection`     | Vers Lambert-93, UTM 30/31/32N, LAEA Europe, Web Mercator ou WGS 84 (proj4)    |
+| Contrôle qualité     | `standardisation.controle_qualite` | Géométrie invalide, données manquantes → rapport (erreurs, avertissements)     |
+| Surface et périmètre | `analyse.surface_perimetre`        | Surface (ha), périmètre (m), indice de compacité                               |
+| NDVI                 | `analyse.ndvi`                     | GeoTIFF rouge + PIR (ex. Sentinel-2 B04/B08) → NDVI par pixel, masqué parcelle |
+| Zonage               | `analyse.zonage`                   | N zones de NDVI homogène (k-means ou quantiles) + statistiques par zone        |
+| Règles métier        | `decision.regles_metier`           | Si indicateur ⋚ seuil → décision (recommandation + explication + motif)        |
+| Devis                | `restitution.devis`                | Surface × tarif/ha par service, frais fixes, TVA (indicatif, pas de facture)   |
+| Nombre / Seuil       | `factice.*`                        | Nœuds de démonstration du moteur                                               |
+
+- **Indicateurs** : les nœuds d'analyse publient une sortie `indicateurs` (clés du catalogue
+  `packages/shared/src/domaine/indicateurs.ts`). L'entrée du nœud Règles métier est `multiple` : elle
+  accepte plusieurs connexions et reçoit un tableau.
+- **Décisions** : à la fin d'une exécution réussie, chaque règle déclenchée devient une `Decision` en
+  brouillon : explication (le « pourquoi »), recommandation, priorité, `donnees` (indicateur, valeur,
+  condition, nœud source) et `noeudIds` (chaîne des nœuds qui l'ont produite).
 
 Jeu de données d'exemple (tests et essais dans l'éditeur) : `apps/api/exemples/` (trace CSV, points
-GeoJSON, contour, contour auto-intersecté, formulaires complet et incomplet).
+GeoJSON, contour, contour auto-intersecté, formulaires complet et incomplet, image Sentinel-2
+synthétique `sentinel2-parcelle.tif`, régénérable par `node scripts/generer-image-exemple.mjs` depuis `apps/api`).
 
 ## Conventions
 

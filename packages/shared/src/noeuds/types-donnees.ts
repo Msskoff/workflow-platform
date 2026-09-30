@@ -1,6 +1,10 @@
 import { z } from 'zod';
+import { devisSchema } from '../domaine/devis';
 import { formulaireTerrainSchema } from '../domaine/formulaire-terrain';
+import { indicateursSchema } from '../domaine/indicateurs';
 import { rapportQualiteSchema } from '../domaine/rapport-qualite';
+import { rasterNdviSchema, zonageSchema } from '../domaine/raster';
+import { resultatReglesSchema } from '../domaine/regles';
 import { geometrieGeoreferenceeSchema } from '../domaine/systemes-coordonnees';
 
 /**
@@ -15,6 +19,11 @@ export const typesDonnees = {
   geometrie: { libelle: 'Géométrie', schema: geometrieGeoreferenceeSchema },
   formulaire_terrain: { libelle: 'Formulaire terrain', schema: formulaireTerrainSchema },
   rapport_qualite: { libelle: 'Rapport qualité', schema: rapportQualiteSchema },
+  indicateurs: { libelle: 'Indicateurs', schema: indicateursSchema },
+  raster_ndvi: { libelle: 'Raster NDVI', schema: rasterNdviSchema },
+  zonage: { libelle: 'Zonage', schema: zonageSchema },
+  decisions: { libelle: 'Décisions', schema: resultatReglesSchema },
+  devis: { libelle: 'Devis', schema: devisSchema },
 } as const satisfies Record<string, { libelle: string; schema: z.ZodType }>;
 
 export type TypeDonnee = keyof typeof typesDonnees;

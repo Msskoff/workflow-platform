@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { horodatageSchema, identifiantSchema, type Transitions } from './commun';
+import { prioriteDecisionSchema } from './regles';
 
 export const statutsDecision = ['brouillon', 'validé', 'envoyé'] as const;
 
@@ -40,6 +41,11 @@ export const decisionSchema = z.object({
   executionId: identifiantSchema,
   noeudIds: noeudIdsSchema,
   explication: explicationSchema,
+  /** Action conseillée par la règle métier ; `null` pour une décision saisie à la main. */
+  recommandation: z.string().nullable(),
+  priorite: prioriteDecisionSchema.nullable(),
+  /** Données qui ont motivé la décision : indicateur, valeur mesurée, condition, source. */
+  donnees: z.record(z.string(), z.json()).nullable(),
   statut: statutDecisionSchema,
   valideeLe: horodatageSchema.nullable(),
   envoyeeLe: horodatageSchema.nullable(),
@@ -54,6 +60,9 @@ export const creerDecisionSchema = z.object({
   executionId: identifiantSchema,
   noeudIds: noeudIdsSchema,
   explication: explicationSchema,
+  recommandation: z.string().trim().min(1).max(300).optional(),
+  priorite: prioriteDecisionSchema.optional(),
+  donnees: z.record(z.string(), z.json()).optional(),
 });
 
 export type CreerDecision = z.infer<typeof creerDecisionSchema>;

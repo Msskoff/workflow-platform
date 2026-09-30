@@ -96,11 +96,14 @@ export function peutConnecter({
     });
   }
 
+  // Une entrée simple n'accepte qu'une connexion ; une entrée `multiple` en accepte
+  // plusieurs, mais pas deux fois la même sortie.
   const entreeOccupee = graphe.connexions.some(
     (existante) =>
       existante.cible === cible &&
       existante.ciblePort === ciblePort &&
-      existante.id !== connexion.id,
+      existante.id !== connexion.id &&
+      (!portCible.multiple || (existante.source === source && existante.sourcePort === sourcePort)),
   );
   if (entreeOccupee) {
     return refus({

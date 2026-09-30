@@ -127,18 +127,24 @@ model ExecutionNoeud {
 }
 
 model Decision {
-  id          String            @id @default(cuid())
-  executionId String
-  execution   ExecutionWorkflow @relation(fields: [executionId], references: [id], onDelete: Restrict)
+  id             String            @id @default(cuid())
+  executionId    String
+  execution      ExecutionWorkflow @relation(fields: [executionId], references: [id], onDelete: Restrict)
   /// Identifiants des nœuds du snapshot qui ont produit la décision (tableau JSON).
-  noeudIds    Json
-  explication String
+  noeudIds       Json
+  explication    String
+  /// Action conseillée par la règle métier (null pour une décision saisie à la main).
+  recommandation String?
+  /// basse | normale | haute
+  priorite       String?
+  /// Données qui ont motivé la décision : indicateur, valeur, condition, nœud source.
+  donnees        Json?
   /// brouillon | validé | envoyé
-  statut      String            @default("brouillon")
-  valideeLe   DateTime?
-  envoyeeLe   DateTime?
-  creeLe      DateTime          @default(now())
-  modifieLe   DateTime          @updatedAt
+  statut         String            @default("brouillon")
+  valideeLe      DateTime?
+  envoyeeLe      DateTime?
+  creeLe         DateTime          @default(now())
+  modifieLe      DateTime          @updatedAt
 
   @@index([executionId, statut])
 }

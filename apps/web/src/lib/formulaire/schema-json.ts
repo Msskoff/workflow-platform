@@ -16,10 +16,10 @@ export interface SchemaJson {
   required?: readonly string[];
   items?: SchemaJson;
   /** Champ spécialisé ; `masque` = non affiché (renseigné par un autre champ). */
-  widget?: 'masque' | 'texte-long' | 'fichier-texte' | 'photos';
-  /** Types de fichiers acceptés par `fichier-texte`. */
+  widget?: 'masque' | 'texte-long' | 'fichier-texte' | 'fichier-binaire' | 'photos' | 'regles';
+  /** Types de fichiers acceptés par `fichier-texte` et `fichier-binaire`. */
   accept?: string;
-  /** Champ voisin qui reçoit le nom du fichier chargé par `fichier-texte`. */
+  /** Champ voisin qui reçoit le nom du fichier chargé (`fichier-texte`, `fichier-binaire`). */
   champNomFichier?: string;
   /** Libellés affichés pour les valeurs d'un `enum`. */
   libelles?: Record<string, string>;

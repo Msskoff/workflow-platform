@@ -4,8 +4,10 @@ import {
   type ErreurWorkflow,
   type GrapheWorkflow,
   type NodeDefinition,
+  type PortsDefinition,
   type TypeDonnee,
   type ValeurDonnee,
+  type ValeursPorts,
 } from '@workflow/shared';
 import type { RegistreNoeuds } from '../noeuds/registre-noeuds';
 import { validerWorkflowComplet } from './valider-workflow';
@@ -48,30 +50,44 @@ interface RassemblerEntreesParams {
   sorties: ReadonlyMap<string, ValeursParPort>;
 }
 
-/** Entrées d'un nœud : sorties des nœuds amont, revalidées selon le type du port. */
+/** Valeurs reçues par un nœud : un tableau pour chaque entrée `multiple`. */
+type ValeursEntrees = Record<string, ValeurDonnee<TypeDonnee> | ValeurDonnee<TypeDonnee>[]>;
+
+/**
+ * Entrées d'un nœud : sorties des nœuds amont, revalidées selon le type du port.
+ * Une entrée `multiple` reçoit les valeurs de toutes ses connexions, dans leur ordre.
+ */
 function rassemblerEntrees({
   graphe,
   noeudId,
   definition,
   sorties,
-}: RassemblerEntreesParams): ValeursParPort {
-  const entrees: ValeursParPort = {};
+}: RassemblerEntreesParams): ValeursEntrees {
+  const entrees: ValeursEntrees = {};
   for (const [nomPort, port] of Object.entries(definition.entrees)) {
-    const connexion = graphe.connexions.find(
-      (candidate) => candidate.cible === noeudId && candidate.ciblePort === nomPort,
-    );
-    const valeur = connexion ? sorties.get(connexion.source)?.[connexion.sourcePort] : undefined;
-    if (valeur === undefined) {
+    const valeurs = graphe.connexions
+      .filter((candidate) => candidate.cible === noeudId && candidate.ciblePort === nomPort)
+      .map((connexion) => sorties.get(connexion.source)?.[connexion.sourcePort])
+      .filter((valeur) => valeur !== undefined);
+    if (valeurs.length === 0) {
       if (port.optionnel) {
         continue;
       }
       throw new Error(`Entrée « ${port.libelle} » sans valeur`);
     }
-    const resultat = schemaDuType({ type: port.type }).safeParse(valeur);
-    if (!resultat.success) {
-      throw new Error(`Entrée « ${port.libelle} » : valeur non conforme au type ${port.type}`);
+    const valides = valeurs.map((valeur) => {
+      const resultat = schemaDuType({ type: port.type }).safeParse(valeur);
+      if (!resultat.success) {
+        throw new Error(`Entrée « ${port.libelle} » : valeur non conforme au type ${port.type}`);
+      }
+      return resultat.data;
+    });
+    const [premiere] = valides;
+    if (port.multiple) {
+      entrees[nomPort] = valides;
+    } else if (premiere !== undefined) {
+      entrees[nomPort] = premiere;
     }
-    entrees[nomPort] = resultat.data;
   }
   return entrees;
 }
@@ -133,7 +149,9 @@ export async function executerWorkflow({
       const inputs = rassemblerEntrees({ graphe, noeudId, definition, sorties });
       const params: unknown = definition.parametres.parse(noeud.parametres);
       const produit = await definition.run({
-        inputs,
+        // Le registre ne connaît les ports qu'à l'exécution : le typage précis (tableau pour
+        // une entrée `multiple`) est garanti par `rassemblerEntrees`, qui valide chaque valeur.
+        inputs: inputs as ValeursPorts<PortsDefinition>,
         params,
         context: { ...contexte, noeudId },
       });

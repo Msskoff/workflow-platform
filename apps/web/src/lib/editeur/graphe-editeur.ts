@@ -39,6 +39,40 @@ export function catalogueDepuis({
   return Object.fromEntries(descripteurs.map((descripteur) => [descripteur.id, descripteur]));
 }
 
+type IndicateurPublie = NonNullable<DescripteurNoeud['sorties'][string]['indicateurs']>[number];
+
+/**
+ * Indicateurs qui arrivent sur les entrées de type `indicateurs` d'un nœud : ceux que
+ * déclarent les sorties amont connectées. Sans doublon, dans l'ordre des connexions.
+ */
+export function indicateursEnAmont({
+  noeudId,
+  noeuds,
+  aretes,
+}: {
+  noeudId: string;
+  noeuds: readonly NoeudEditeur[];
+  aretes: readonly Edge[];
+}): IndicateurPublie[] {
+  const parId = new Map(noeuds.map((noeud) => [noeud.id, noeud]));
+  const cible = parId.get(noeudId);
+  const publies = aretes
+    .filter(
+      (arete) =>
+        arete.target === noeudId &&
+        arete.targetHandle &&
+        cible?.data.descripteur.entrees[arete.targetHandle]?.type === 'indicateurs',
+    )
+    .flatMap((arete) =>
+      arete.sourceHandle
+        ? (parId.get(arete.source)?.data.descripteur.sorties[arete.sourceHandle]?.indicateurs ?? [])
+        : [],
+    );
+  return publies.filter(
+    (indicateur, index) => publies.findIndex((autre) => autre.cle === indicateur.cle) === index,
+  );
+}
+
 /** Nœuds et arêtes React Flow → graphe de workflow (format partagé avec l'API). */
 export function versGraphe({
   noeuds,
@@ -104,18 +138,33 @@ export function creerNoeud({
   };
 }
 
-/** Pipeline de départ : collecte, reprojection et contrôle qualité d'une parcelle. */
+/**
+ * Pipeline de départ : collecte et contrôle qualité (haut), puis analyse, règles métier
+ * et devis (bas), du contour GPS jusqu'aux décisions.
+ */
 const PIPELINE_DEMO = {
   noeuds: [
-    { cle: 'gps', type: 'collecte.import_gps', position: { x: 0, y: 0 } },
+    { cle: 'gps', type: 'collecte.import_gps', position: { x: 0, y: 120 } },
     { cle: 'l93', type: 'standardisation.reprojection', position: { x: 320, y: 0 } },
-    { cle: 'terrain', type: 'collecte.formulaire_terrain', position: { x: 320, y: 170 } },
+    { cle: 'terrain', type: 'collecte.formulaire_terrain', position: { x: 320, y: 150 } },
     { cle: 'qc', type: 'standardisation.controle_qualite', position: { x: 640, y: 40 } },
+    { cle: 'surface', type: 'analyse.surface_perimetre', position: { x: 320, y: 300 } },
+    { cle: 'ndvi', type: 'analyse.ndvi', position: { x: 320, y: 480 } },
+    { cle: 'zonage', type: 'analyse.zonage', position: { x: 640, y: 520 } },
+    { cle: 'regles', type: 'decision.regles_metier', position: { x: 960, y: 360 } },
+    { cle: 'devis', type: 'restitution.devis', position: { x: 640, y: 280 } },
   ],
   liens: [
     { source: 'gps', sourcePort: 'geometrie', cible: 'l93', ciblePort: 'geometrie' },
     { source: 'l93', sourcePort: 'geometrie', cible: 'qc', ciblePort: 'geometrie' },
     { source: 'terrain', sourcePort: 'formulaire', cible: 'qc', ciblePort: 'formulaire' },
+    { source: 'gps', sourcePort: 'geometrie', cible: 'surface', ciblePort: 'geometrie' },
+    { source: 'gps', sourcePort: 'geometrie', cible: 'ndvi', ciblePort: 'geometrie' },
+    { source: 'ndvi', sourcePort: 'raster', cible: 'zonage', ciblePort: 'raster' },
+    { source: 'surface', sourcePort: 'surfaceHa', cible: 'devis', ciblePort: 'surfaceHa' },
+    { source: 'surface', sourcePort: 'indicateurs', cible: 'regles', ciblePort: 'indicateurs' },
+    { source: 'ndvi', sourcePort: 'indicateurs', cible: 'regles', ciblePort: 'indicateurs' },
+    { source: 'zonage', sourcePort: 'indicateurs', cible: 'regles', ciblePort: 'indicateurs' },
   ],
 } as const;
 

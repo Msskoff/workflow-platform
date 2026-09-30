@@ -59,6 +59,9 @@ export class DecisionsService implements ServiceCrud<
         executionId: donnees.executionId,
         noeudIds: donnees.noeudIds,
         explication: donnees.explication,
+        recommandation: donnees.recommandation ?? null,
+        priorite: donnees.priorite ?? null,
+        donnees: donnees.donnees,
       },
     });
     return versDecision({ ligne });

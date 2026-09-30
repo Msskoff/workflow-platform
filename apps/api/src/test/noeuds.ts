@@ -10,6 +10,11 @@ export function lireExemple({ nom }: { nom: string }): string {
   return readFileSync(resolve(DOSSIER_EXEMPLES, nom), 'utf8');
 }
 
+/** Fichier binaire du jeu de données d'exemple, encodé en base64 (comme l'envoie l'éditeur). */
+export function lireExempleBase64({ nom }: { nom: string }): string {
+  return readFileSync(resolve(DOSSIER_EXEMPLES, nom)).toString('base64');
+}
+
 /** Fichier JSON du jeu de données d'exemple. */
 export function lireExempleJson({ nom }: { nom: string }): unknown {
   return JSON.parse(lireExemple({ nom }));

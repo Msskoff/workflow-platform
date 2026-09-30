@@ -6,6 +6,7 @@ import { ChampChoix } from './champ-choix';
 import { ChampListe } from './champ-liste';
 import { ChampNombre } from './champ-nombre';
 import { ChampPhotos } from './champ-photos';
+import { ChampRegles } from './champ-regles';
 import { ChampTexte } from './champ-texte';
 import { ChampTexteLong } from './champ-texte-long';
 import { GroupeChamps } from './groupe-champs';
@@ -21,6 +22,9 @@ interface ChampSchemaProps {
 export function ChampSchema({ nom, schema, valeur, surChangement }: ChampSchemaProps) {
   if (schema.widget === 'masque') {
     return null;
+  }
+  if (schema.widget === 'regles') {
+    return <ChampRegles nom={nom} schema={schema} valeur={valeur} surChangement={surChangement} />;
   }
   if (schema.widget === 'photos') {
     return <ChampPhotos nom={nom} schema={schema} valeur={valeur} surChangement={surChangement} />;
