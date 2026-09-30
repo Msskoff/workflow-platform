@@ -70,8 +70,19 @@ Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui
 - **Exécution** : `POST /executions` (snapshot du graphe), puis `POST /executions/:id/lancer`. Le moteur
   trie les nœuds topologiquement, les exécute dans l'ordre et enregistre le statut de chaque nœud
   (`en_attente | en_cours | ok | erreur`), lu par l'éditeur via `GET /executions/:id`.
-- **Éditeur** : <http://localhost:3000/editeur>. Les nœuds `factice.nombre` et `factice.seuil` servent de
-  démonstration (une valeur négative fait échouer le seuil).
+- **Éditeur** : <http://localhost:3000/editeur>. Un clic sur un nœud ouvre le panneau latéral de ses
+  paramètres (formulaire généré depuis le schéma Zod du nœud) et le résultat de sa dernière exécution.
+
+| Nœud               | Id                                 | Rôle                                                                        |
+| ------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| Import GPS         | `collecte.import_gps`              | GeoJSON (points, trace, polygone) ou CSV de points → contour de parcelle    |
+| Formulaire terrain | `collecte.formulaire_terrain`      | Culture, sol, irrigation, historique, photos (métadonnées uniquement)       |
+| Reprojection       | `standardisation.reprojection`     | Vers Lambert-93, UTM 30/31/32N, LAEA Europe, Web Mercator ou WGS 84 (proj4) |
+| Contrôle qualité   | `standardisation.controle_qualite` | Géométrie invalide, données manquantes → rapport (erreurs, avertissements)  |
+| Nombre / Seuil     | `factice.*`                        | Nœuds de démonstration du moteur                                            |
+
+Jeu de données d'exemple (tests et essais dans l'éditeur) : `apps/api/exemples/` (trace CSV, points
+GeoJSON, contour, contour auto-intersecté, formulaires complet et incomplet).
 
 ## Conventions
 

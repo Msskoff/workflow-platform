@@ -1,14 +1,20 @@
 import { z } from 'zod';
+import { formulaireTerrainSchema } from '../domaine/formulaire-terrain';
+import { rapportQualiteSchema } from '../domaine/rapport-qualite';
+import { geometrieGeoreferenceeSchema } from '../domaine/systemes-coordonnees';
 
 /**
  * Catalogue des types de données qui circulent entre les ports des nœuds.
  * Chaque type porte le schéma Zod qui valide ses valeurs à l'exécution.
- * Ajouter un type (ex. géométrie, série NDVI) = ajouter une entrée ici.
+ * Ajouter un type (ex. série NDVI) = ajouter une entrée ici.
  */
 export const typesDonnees = {
   nombre: { libelle: 'Nombre', schema: z.number() },
   texte: { libelle: 'Texte', schema: z.string() },
   booleen: { libelle: 'Booléen', schema: z.boolean() },
+  geometrie: { libelle: 'Géométrie', schema: geometrieGeoreferenceeSchema },
+  formulaire_terrain: { libelle: 'Formulaire terrain', schema: formulaireTerrainSchema },
+  rapport_qualite: { libelle: 'Rapport qualité', schema: rapportQualiteSchema },
 } as const satisfies Record<string, { libelle: string; schema: z.ZodType }>;
 
 export type TypeDonnee = keyof typeof typesDonnees;

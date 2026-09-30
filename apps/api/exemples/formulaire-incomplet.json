@@ -1,0 +1,9 @@
+{
+  "culture": "  ",
+  "irrigation": { "statut": "irriguee" },
+  "historique": [
+    { "annee": 2025, "culture": "" },
+    { "annee": 2025, "culture": "Maïs grain" }
+  ],
+  "photos": [{ "nom": "photo-sans-gps.jpg", "typeMime": "image/jpeg", "tailleOctets": 1200000 }]
+}

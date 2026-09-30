@@ -1,9 +1,8 @@
 'use client';
 
-import { useReactFlow, type NodeProps } from '@xyflow/react';
+import type { NodeProps } from '@xyflow/react';
 import { couleursCategorie, type NoeudEditeur } from '@/lib/editeur/graphe-editeur';
 import { BadgeStatutNoeud } from './badge-statut-noeud';
-import { ChampParametre, type SchemaParametre } from './champ-parametre';
 import { PortNoeud } from './port-noeud';
 
 const BORDURES_STATUT = {
@@ -13,19 +12,17 @@ const BORDURES_STATUT = {
   erreur: 'border-red-500 ring-2 ring-red-200',
 } as const;
 
-/** Nœud de workflow dans React Flow : catégorie, statut d'exécution, ports et paramètres. */
+/**
+ * Nœud de workflow dans React Flow : catégorie, statut d'exécution et ports.
+ * Les paramètres se règlent dans le panneau latéral.
+ */
 export function NoeudWorkflow({ id, data, selected }: NodeProps<NoeudEditeur>) {
-  const { updateNodeData } = useReactFlow<NoeudEditeur>();
-  const { descripteur, parametres, etat } = data;
-  const proprietes = (descripteur.parametres.properties ?? {}) as Record<string, SchemaParametre>;
-  const parametresNumeriques = Object.entries(proprietes).filter(
-    ([, schema]) => schema.type === 'number' || schema.type === 'integer',
-  );
+  const { descripteur, etat } = data;
   const bordure = etat ? BORDURES_STATUT[etat.statut] : 'border-neutral-300';
 
   return (
     <div
-      className={`w-64 rounded-lg border-2 bg-white shadow-sm ${bordure} ${selected ? 'shadow-lg' : ''}`}
+      className={`w-60 rounded-lg border-2 bg-white shadow-sm ${bordure} ${selected ? 'outline outline-2 outline-offset-2 outline-emerald-600' : ''}`}
       data-noeud-id={id}
     >
       <header
@@ -55,24 +52,8 @@ export function NoeudWorkflow({ id, data, selected }: NodeProps<NoeudEditeur>) {
         ))}
       </div>
 
-      {parametresNumeriques.length > 0 && (
-        <div className="space-y-1 border-t border-neutral-100 px-3 py-2">
-          {parametresNumeriques.map(([nom, schema]) => (
-            <ChampParametre
-              key={nom}
-              nom={nom}
-              schema={schema}
-              valeur={parametres[nom]}
-              surChangement={({ valeur }) =>
-                updateNodeData(id, { parametres: { ...parametres, [nom]: valeur } })
-              }
-            />
-          ))}
-        </div>
-      )}
-
       {etat?.statut === 'erreur' && etat.erreur && (
-        <p className="border-t border-red-100 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+        <p className="line-clamp-3 border-t border-red-100 bg-red-50 px-3 py-1.5 text-xs text-red-700">
           {etat.erreur}
         </p>
       )}

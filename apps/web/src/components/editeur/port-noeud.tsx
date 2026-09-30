@@ -34,7 +34,10 @@ export function PortNoeud({ nom, port, sens, valeur }: PortNoeudProps) {
         {typesDonnees[port.type].libelle}
       </span>
       {valeur !== undefined && (
-        <span className="font-mono text-[10px] text-emerald-700">= {JSON.stringify(valeur)}</span>
+        <span className="max-w-24 truncate font-mono text-[10px] text-emerald-700">
+          {/* Valeurs simples affichées ; les objets (géométrie, rapport) sont dans le panneau. */}
+          {typeof valeur === 'object' ? '✓' : `= ${JSON.stringify(valeur)}`}
+        </span>
       )}
     </div>
   );

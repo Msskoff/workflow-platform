@@ -1,0 +1,21 @@
+{
+  "culture": "Blé tendre d'hiver",
+  "typeSol": "limoneux",
+  "irrigation": { "statut": "irriguee", "systeme": "enrouleur", "volumeAnnuelM3Ha": 800 },
+  "historique": [
+    { "annee": 2024, "culture": "Colza", "rendementTHa": 3.6 },
+    { "annee": 2025, "culture": "Orge de printemps", "rendementTHa": 6.8 }
+  ],
+  "photos": [
+    {
+      "nom": "IMG_2031.jpg",
+      "typeMime": "image/jpeg",
+      "tailleOctets": 2483211,
+      "modifieeLe": "2026-03-12T08:10:00.000Z",
+      "latitude": 48.4415,
+      "longitude": 1.4831,
+      "legende": "Levée homogène côté nord"
+    }
+  ],
+  "observations": "Quelques zones de battance près du chemin."
+}

@@ -30,11 +30,13 @@ import {
   idConnexion,
   TYPE_NOEUD_EDITEUR,
   versGraphe,
+  type DonneesNoeudEditeur,
   type NoeudEditeur,
 } from '@/lib/editeur/graphe-editeur';
 import { useExecutionWorkflow } from '@/lib/editeur/use-execution-workflow';
 import { BarreExecution } from './barre-execution';
 import { NoeudWorkflow } from './noeud-workflow';
+import { PanneauNoeud } from './panneau-noeud';
 import { PaletteNoeuds } from './palette-noeuds';
 
 const typesNoeuds: NodeTypes = { [TYPE_NOEUD_EDITEUR]: NoeudWorkflow };
@@ -156,6 +158,28 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
     void lancer({ campagneId, snapshot: { ...IDENTITE_WORKFLOW, ...graphe } });
   }, [lancer, campagneId, graphe]);
 
+  // Le panneau latéral édite le nœud sélectionné (un seul à la fois).
+  const noeudSelectionne = useMemo(() => {
+    const selectionnes = noeudsAffiches.filter((noeud) => noeud.selected);
+    return selectionnes.length === 1 ? (selectionnes[0] ?? null) : null;
+  }, [noeudsAffiches]);
+
+  const modifierParametres = useCallback(
+    ({ parametres }: { parametres: DonneesNoeudEditeur['parametres'] }) => {
+      if (!noeudSelectionne) {
+        return;
+      }
+      setNoeuds((existants) =>
+        existants.map((noeud) =>
+          noeud.id === noeudSelectionne.id
+            ? { ...noeud, data: { ...noeud.data, parametres } }
+            : noeud,
+        ),
+      );
+    },
+    [noeudSelectionne, setNoeuds],
+  );
+
   return (
     <div className="flex h-screen flex-col">
       <BarreExecution
@@ -188,6 +212,7 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
             <Controls />
           </ReactFlow>
         </div>
+        <PanneauNoeud noeud={noeudSelectionne} surChangementParametres={modifierParametres} />
       </div>
     </div>
   );

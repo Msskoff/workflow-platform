@@ -11,7 +11,7 @@ export const positionSchema = z.union([
 
 export type Position = z.infer<typeof positionSchema>;
 
-function anneauEstFerme(anneau: readonly Position[]): boolean {
+function anneauEstFerme(anneau: readonly (readonly number[])[]): boolean {
   const premier = anneau[0];
   const dernier = anneau[anneau.length - 1];
   return (
@@ -38,10 +38,34 @@ export const multiPolygoneSchema = z.object({
   coordinates: z.array(z.array(anneauSchema).min(1)).min(1),
 });
 
-/** Géométrie d'une parcelle : GeoJSON Polygon ou MultiPolygon (WGS84). */
+/** Géométrie d'une parcelle : GeoJSON Polygon ou MultiPolygon valide, en WGS84. */
 export const geometrieParcelleSchema = z.discriminatedUnion('type', [
   polygoneSchema,
   multiPolygoneSchema,
 ]);
 
 export type GeometrieParcelle = z.infer<typeof geometrieParcelleSchema>;
+
+/**
+ * Position dans un système de coordonnées quelconque (degrés ou mètres) : `[x, y]` ou `[x, y, z]`.
+ * Aucune borne : les valeurs dépendent du système de coordonnées.
+ */
+export const positionPlaneSchema = z.array(z.number()).min(2).max(3);
+
+/**
+ * Polygone ou MultiPolygon dont seule la structure est vérifiée (anneaux non fermés,
+ * trop courts ou auto-intersectés acceptés). Sert à transporter une géométrie brute
+ * jusqu'au contrôle qualité, qui en signale les défauts.
+ */
+export const geometriePlaneSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('Polygon'),
+    coordinates: z.array(z.array(positionPlaneSchema)),
+  }),
+  z.object({
+    type: z.literal('MultiPolygon'),
+    coordinates: z.array(z.array(z.array(positionPlaneSchema))),
+  }),
+]);
+
+export type GeometriePlane = z.infer<typeof geometriePlaneSchema>;

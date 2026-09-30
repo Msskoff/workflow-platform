@@ -104,42 +104,56 @@ export function creerNoeud({
   };
 }
 
-/** Graphe de départ : un nœud « Nombre » relié à un nœud « Seuil », si le catalogue les propose. */
+/** Pipeline de départ : collecte, reprojection et contrôle qualité d'une parcelle. */
+const PIPELINE_DEMO = {
+  noeuds: [
+    { cle: 'gps', type: 'collecte.import_gps', position: { x: 0, y: 0 } },
+    { cle: 'l93', type: 'standardisation.reprojection', position: { x: 320, y: 0 } },
+    { cle: 'terrain', type: 'collecte.formulaire_terrain', position: { x: 320, y: 170 } },
+    { cle: 'qc', type: 'standardisation.controle_qualite', position: { x: 640, y: 40 } },
+  ],
+  liens: [
+    { source: 'gps', sourcePort: 'geometrie', cible: 'l93', ciblePort: 'geometrie' },
+    { source: 'l93', sourcePort: 'geometrie', cible: 'qc', ciblePort: 'geometrie' },
+    { source: 'terrain', sourcePort: 'formulaire', cible: 'qc', ciblePort: 'formulaire' },
+  ],
+} as const;
+
+/** Graphe de départ de l'éditeur ; vide si le catalogue ne propose pas ces nœuds. */
 export function grapheDemo({ descripteurs }: { descripteurs: readonly DescripteurNoeud[] }): {
   noeuds: NoeudEditeur[];
   aretes: Edge[];
 } {
-  const nombre = descripteurs.find((descripteur) => descripteur.id === 'factice.nombre');
-  const seuil = descripteurs.find((descripteur) => descripteur.id === 'factice.seuil');
-  if (!nombre || !seuil) {
-    return { noeuds: [], aretes: [] };
+  const idsParCle = new Map<string, string>();
+  const noeuds: NoeudEditeur[] = [];
+  for (const { cle, type, position } of PIPELINE_DEMO.noeuds) {
+    const descripteur = descripteurs.find((candidat) => candidat.id === type);
+    if (!descripteur) {
+      return { noeuds: [], aretes: [] };
+    }
+    const noeud = creerNoeud({
+      descripteur,
+      position,
+      idsExistants: new Set(noeuds.map((existant) => existant.id)),
+    });
+    idsParCle.set(cle, noeud.id);
+    noeuds.push(noeud);
   }
-  const source = creerNoeud({
-    descripteur: nombre,
-    position: { x: 40, y: 80 },
-    idsExistants: new Set(),
+
+  const aretes = PIPELINE_DEMO.liens.map((lien) => {
+    const connexion = {
+      source: idsParCle.get(lien.source) ?? '',
+      sourcePort: lien.sourcePort,
+      cible: idsParCle.get(lien.cible) ?? '',
+      ciblePort: lien.ciblePort,
+    };
+    return {
+      id: idConnexion({ connexion }),
+      source: connexion.source,
+      sourceHandle: connexion.sourcePort,
+      target: connexion.cible,
+      targetHandle: connexion.ciblePort,
+    };
   });
-  const cible = creerNoeud({
-    descripteur: seuil,
-    position: { x: 420, y: 60 },
-    idsExistants: new Set([source.id]),
-  });
-  const connexion = {
-    source: source.id,
-    sourcePort: 'nombre',
-    cible: cible.id,
-    ciblePort: 'valeur',
-  };
-  return {
-    noeuds: [source, cible],
-    aretes: [
-      {
-        id: idConnexion({ connexion }),
-        source: source.id,
-        sourceHandle: 'nombre',
-        target: cible.id,
-        targetHandle: 'valeur',
-      },
-    ],
-  };
+  return { noeuds, aretes };
 }

@@ -155,9 +155,20 @@ describe('RegistreNoeuds', () => {
   });
 
   it('décrit les nœuds pour l’éditeur, avec leurs paramètres par défaut', () => {
-    expect(creerRegistreNoeuds().decrire()).toMatchObject([
-      { id: 'factice.nombre', categorie: 'collecte', parametresParDefaut: { valeur: 42 } },
-      { id: 'factice.seuil', categorie: 'decision', parametresParDefaut: { seuil: 10 } },
-    ]);
+    const descripteurs = creerRegistreNoeuds().decrire();
+
+    expect(descripteurs).toContainEqual(
+      expect.objectContaining({
+        id: 'factice.nombre',
+        categorie: 'collecte',
+        parametresParDefaut: { valeur: 42, dureeMs: 800 },
+      }),
+    );
+    expect(
+      descripteurs.find((descripteur) => descripteur.id === 'standardisation.reprojection'),
+    ).toMatchObject({
+      categorie: 'standardisation',
+      parametresParDefaut: { crsCible: 'EPSG:2154' },
+    });
   });
 });
