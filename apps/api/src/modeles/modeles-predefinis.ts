@@ -1,10 +1,21 @@
-import type { ConnexionWorkflow, GrapheWorkflow, RegleMetier } from '@workflow/shared';
+import {
+  appliquerParametresCulture,
+  type ConnexionWorkflow,
+  type GrapheWorkflow,
+  type ParametresCulture,
+  type RegleMetier,
+} from '@workflow/shared';
+import { CULTURES_EXEMPLE, PARAMETRES_CULTURES_EXEMPLE } from '../cultures/cultures-exemple';
 
 export interface ModelePredefini {
   code: string;
   nom: string;
   description: string;
   graphe: GrapheWorkflow;
+  /** Code de la culture visée (rattachement fait à la synchronisation, si elle existe en base). */
+  cultureCode?: string;
+  /** Paramètres par défaut, déjà appliqués à `graphe`. */
+  parametresDefaut?: ParametresCulture;
 }
 
 /** Connexion `source.port → cible.port`, identifiant dérivé des extrémités. */
@@ -207,5 +218,34 @@ export const DIAGNOSTIC_INITIAL_PARCELLE: ModelePredefini = {
   },
 };
 
+/**
+ * Déclinaison du diagnostic pour chaque culture d'exemple : même graphe, avec les seuils NDVI
+ * et les tarifs de la culture. ⚠️ Paramètres à valider par un agronome (voir cultures-exemple.ts).
+ */
+export const DIAGNOSTICS_PAR_CULTURE: readonly ModelePredefini[] = CULTURES_EXEMPLE.flatMap(
+  (culture) => {
+    const parametres = PARAMETRES_CULTURES_EXEMPLE[culture.code];
+    if (!parametres) {
+      return [];
+    }
+    return [
+      {
+        code: `diagnostic-${culture.code}`,
+        nom: `Diagnostic ${culture.nom.toLowerCase()}`,
+        description: `Diagnostic initial adapté au ${culture.nom.toLowerCase()} : seuils NDVI, doses de référence et tarifs de la culture (valeurs à valider par un agronome).`,
+        graphe: appliquerParametresCulture({
+          graphe: DIAGNOSTIC_INITIAL_PARCELLE.graphe,
+          parametres,
+        }),
+        cultureCode: culture.code,
+        parametresDefaut: parametres,
+      },
+    ];
+  },
+);
+
 /** Modèles fournis par la plateforme, synchronisés en base au démarrage de l'API. */
-export const MODELES_PREDEFINIS: readonly ModelePredefini[] = [DIAGNOSTIC_INITIAL_PARCELLE];
+export const MODELES_PREDEFINIS: readonly ModelePredefini[] = [
+  DIAGNOSTIC_INITIAL_PARCELLE,
+  ...DIAGNOSTICS_PAR_CULTURE,
+];

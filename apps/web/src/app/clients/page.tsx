@@ -1,4 +1,10 @@
-import { apiRoutes, campagneSchema, clientSchema, parcelleSchema } from '@workflow/shared';
+import {
+  apiRoutes,
+  campagneSchema,
+  clientSchema,
+  cultureSchema,
+  parcelleSchema,
+} from '@workflow/shared';
 import { z } from 'zod';
 import { EcranClients } from '@/components/clients/ecran-clients';
 import { LiensNavigation } from '@/components/navigation/liens-navigation';
@@ -7,12 +13,13 @@ import { lireApiServeur } from '@/lib/api/api-serveur';
 export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
-  const [clients, parcelles, campagnes] = await Promise.all([
+  const [clients, parcelles, campagnes, cultures] = await Promise.all([
     lireApiServeur({ chemin: apiRoutes.clients, schema: z.array(clientSchema) }),
     lireApiServeur({ chemin: apiRoutes.parcelles, schema: z.array(parcelleSchema) }),
     lireApiServeur({ chemin: apiRoutes.campagnes, schema: z.array(campagneSchema) }),
+    lireApiServeur({ chemin: apiRoutes.cultures, schema: z.array(cultureSchema) }),
   ]);
-  const erreur = [clients, parcelles, campagnes].find((resultat) => !resultat.ok);
+  const erreur = [clients, parcelles, campagnes, cultures].find((resultat) => !resultat.ok);
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 p-6">
@@ -26,11 +33,12 @@ export default async function ClientsPage() {
         </div>
         <LiensNavigation actif="/clients" />
       </header>
-      {clients.ok && parcelles.ok && campagnes.ok ? (
+      {clients.ok && parcelles.ok && campagnes.ok && cultures.ok ? (
         <EcranClients
           clientsInitiaux={clients.donnees}
           parcellesInitiales={parcelles.donnees}
           campagnesInitiales={campagnes.donnees}
+          cultures={cultures.donnees}
         />
       ) : (
         <p className="text-sm text-red-700">{erreur && !erreur.ok ? erreur.erreur : ''}</p>

@@ -12,6 +12,8 @@ export const apiRoutes = {
   /** Décisions avec leur contexte, pour l'écran de revue interne. */
   revueDecisions: '/revue/decisions',
   modeles: '/modeles',
+  /** Référentiel des cultures (stades, cycle) et propositions de campagne. */
+  cultures: '/cultures',
   /** Lecture seule pour l'espace client : décisions envoyées uniquement. */
   espaceClient: '/espace-client',
   /** Suivi de campagne interne : conseillé, appliqué, reste à faire. */

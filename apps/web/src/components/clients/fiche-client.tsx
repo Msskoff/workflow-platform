@@ -1,14 +1,16 @@
 'use client';
 
-import type { Campagne, Client, Parcelle } from '@workflow/shared';
+import type { Campagne, Client, Culture, Parcelle } from '@workflow/shared';
 import { AccesEspaceClient } from './acces-espace-client';
 import { FormulaireCampagne } from './formulaire-campagne';
 import { FormulaireParcelle } from './formulaire-parcelle';
+import { PuceCampagne } from './puce-campagne';
 
 interface FicheClientProps {
   client: Client;
   parcelles: readonly Parcelle[];
   campagnes: readonly Campagne[];
+  cultures: readonly Culture[];
   surParcelleCreee: (params: { parcelle: Parcelle }) => void;
   surCampagneCreee: (params: { campagne: Campagne }) => void;
 }
@@ -18,6 +20,7 @@ export function FicheClient({
   client,
   parcelles,
   campagnes,
+  cultures,
   surParcelleCreee,
   surCampagneCreee,
 }: FicheClientProps) {
@@ -51,14 +54,17 @@ export function FicheClient({
                 {campagnesParcelle.length > 0 && (
                   <ul className="flex flex-wrap gap-1.5 text-xs">
                     {campagnesParcelle.map((campagne) => (
-                      <li key={campagne.id} className="rounded-full bg-neutral-100 px-2 py-0.5">
-                        {campagne.nom}
-                        {campagne.culture ? ` · ${campagne.culture}` : ''}
+                      <li key={campagne.id}>
+                        <PuceCampagne campagne={campagne} />
                       </li>
                     ))}
                   </ul>
                 )}
-                <FormulaireCampagne parcelleId={parcelle.id} surCreation={surCampagneCreee} />
+                <FormulaireCampagne
+                  parcelleId={parcelle.id}
+                  cultures={cultures}
+                  surCreation={surCampagneCreee}
+                />
               </li>
             );
           })}

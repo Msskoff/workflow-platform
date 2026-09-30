@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { horodatageSchema, identifiantSchema, texteCourtSchema } from './commun';
+import { parametresCultureSchema } from './parametres-culture';
 import { grapheWorkflowSchema } from './workflow-snapshot';
 
 /**
@@ -14,6 +15,10 @@ export const modeleWorkflowSchema = z.object({
   nom: texteCourtSchema,
   description: z.string(),
   predefini: z.boolean(),
+  /** Culture à laquelle le modèle est destiné ; `null` pour un modèle générique. */
+  culture: z.object({ id: identifiantSchema, nom: z.string() }).nullable(),
+  /** Paramètres par défaut exposés par le modèle (déjà appliqués au graphe). */
+  parametresDefaut: parametresCultureSchema.nullable(),
   graphe: grapheWorkflowSchema,
   creeLe: horodatageSchema,
   modifieLe: horodatageSchema,
@@ -28,10 +33,15 @@ export const resumeModeleSchema = modeleWorkflowSchema
 
 export type ResumeModele = z.infer<typeof resumeModeleSchema>;
 
+/**
+ * Création : si `parametresDefaut` est fourni, l'API l'applique au graphe avant enregistrement.
+ */
 export const creerModeleSchema = z.object({
   nom: texteCourtSchema,
   description: z.string().trim().max(1000).default(''),
   graphe: grapheWorkflowSchema,
+  cultureId: identifiantSchema.nullable().optional(),
+  parametresDefaut: parametresCultureSchema.nullable().optional(),
 });
 
 export type CreerModele = z.infer<typeof creerModeleSchema>;
@@ -40,6 +50,8 @@ export const modifierModeleSchema = z.object({
   nom: texteCourtSchema.optional(),
   description: z.string().trim().max(1000).optional(),
   graphe: grapheWorkflowSchema.optional(),
+  cultureId: identifiantSchema.nullable().optional(),
+  parametresDefaut: parametresCultureSchema.nullable().optional(),
 });
 
 export type ModifierModele = z.infer<typeof modifierModeleSchema>;

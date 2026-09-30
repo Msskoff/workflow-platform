@@ -1,8 +1,15 @@
 import { modeleWorkflowSchema, type ModeleWorkflow, type ResumeModele } from '@workflow/shared';
 import type { ModeleWorkflow as ModeleLigne } from '../generated/prisma/client';
 
-/** Ligne Prisma → modèle partagé (le graphe JSON est revalidé). */
-export function versModele({ ligne }: { ligne: ModeleLigne }): ModeleWorkflow {
+/** Relation à inclure pour connaître le nom de la culture d'un modèle. */
+export const INCLURE_CULTURE = { culture: { select: { id: true, nom: true } } } as const;
+
+interface VersModeleParams {
+  ligne: ModeleLigne & { culture: { id: string; nom: string } | null };
+}
+
+/** Ligne Prisma → modèle partagé (graphe et paramètres JSON revalidés). */
+export function versModele({ ligne }: VersModeleParams): ModeleWorkflow {
   return modeleWorkflowSchema.parse({
     ...ligne,
     creeLe: ligne.creeLe.toISOString(),
@@ -12,14 +19,6 @@ export function versModele({ ligne }: { ligne: ModeleLigne }): ModeleWorkflow {
 
 /** Modèle → entrée de liste, sans le graphe. */
 export function versResume({ modele }: { modele: ModeleWorkflow }): ResumeModele {
-  return {
-    id: modele.id,
-    code: modele.code,
-    nom: modele.nom,
-    description: modele.description,
-    predefini: modele.predefini,
-    nombreNoeuds: modele.graphe.noeuds.length,
-    creeLe: modele.creeLe,
-    modifieLe: modele.modifieLe,
-  };
+  const { graphe, ...resume } = modele;
+  return { ...resume, nombreNoeuds: graphe.noeuds.length };
 }

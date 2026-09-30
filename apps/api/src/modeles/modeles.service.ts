@@ -5,22 +5,28 @@ import {
   Logger,
   type OnModuleInit,
 } from '@nestjs/common';
-import type {
-  CreerModele,
-  GrapheWorkflow,
-  ModeleWorkflow,
-  ModifierModele,
-  ResumeModele,
+import {
+  appliquerParametresCulture,
+  type CreerModele,
+  type GrapheWorkflow,
+  type ModeleWorkflow,
+  type ModifierModele,
+  type ParametresCulture,
+  type ResumeModele,
 } from '@workflow/shared';
+import { Prisma } from '../generated/prisma/client';
 import { executerSansDoublon, introuvable } from '../common/erreurs';
 import type { ServiceCrud } from '../common/service-crud';
 import { validerWorkflowComplet } from '../moteur/valider-workflow';
 import { RegistreNoeuds } from '../noeuds/registre-noeuds';
 import { PrismaService } from '../prisma/prisma.service';
 import { MODELES_PREDEFINIS } from './modeles-predefinis';
-import { versModele, versResume } from './modeles.mapper';
+import { INCLURE_CULTURE, versModele, versResume } from './modeles.mapper';
 
-type FiltreModeles = Record<string, never>;
+export interface FiltreModeles {
+  /** Seulement les modèles de cette culture. */
+  cultureId?: string;
+}
 
 /**
  * Modèles de workflow. Un modèle doit être exécutable à la structure près (types de nœuds
@@ -44,16 +50,27 @@ export class ModelesService
 
   /**
    * Crée ou met à jour les modèles prédéfinis à partir du code (identifiés par `code`).
-   * Idempotent : appelé à chaque démarrage de l'API.
+   * Idempotent : appelé à chaque démarrage de l'API et après le seed des cultures.
+   * Un modèle de culture n'est rattaché que si la culture existe en base (seed).
    */
   async synchroniserPredefinis(): Promise<void> {
     for (const predefini of MODELES_PREDEFINIS) {
       this.verifierGraphe({ graphe: predefini.graphe });
+      const culture = predefini.cultureCode
+        ? await this.prisma.culture.findUnique({ where: { code: predefini.cultureCode } })
+        : null;
+      if (predefini.cultureCode && !culture) {
+        this.journal.log(
+          `Culture « ${predefini.cultureCode} » absente : lancez le seed pour rattacher « ${predefini.nom} »`,
+        );
+      }
       const donnees = {
         nom: predefini.nom,
         description: predefini.description,
         graphe: predefini.graphe,
         predefini: true,
+        cultureId: culture?.id ?? null,
+        parametresDefaut: predefini.parametresDefaut ?? Prisma.DbNull,
       };
       try {
         await this.prisma.modeleWorkflow.upsert({
@@ -69,32 +86,52 @@ export class ModelesService
     }
   }
 
-  async lister(): Promise<ModeleWorkflow[]> {
+  async lister({ filtre = {} }: { filtre?: FiltreModeles } = {}): Promise<ModeleWorkflow[]> {
     const lignes = await this.prisma.modeleWorkflow.findMany({
-      orderBy: [{ predefini: 'desc' }, { nom: 'asc' }],
+      where: { cultureId: filtre.cultureId },
+      include: INCLURE_CULTURE,
     });
-    return lignes.map((ligne) => versModele({ ligne }));
+    // Prédéfinis d'abord, puis ordre alphabétique français (SQLite classerait « maïs » après « manioc »).
+    return lignes
+      .map((ligne) => versModele({ ligne }))
+      .sort(
+        (a, b) => Number(b.predefini) - Number(a.predefini) || a.nom.localeCompare(b.nom, 'fr'),
+      );
   }
 
   /** Liste légère pour l'éditeur (sans les graphes). */
-  async listerResumes(): Promise<ResumeModele[]> {
-    return (await this.lister()).map((modele) => versResume({ modele }));
+  async listerResumes({ filtre = {} }: { filtre?: FiltreModeles } = {}): Promise<ResumeModele[]> {
+    return (await this.lister({ filtre })).map((modele) => versResume({ modele }));
   }
 
   async trouver({ id }: { id: string }): Promise<ModeleWorkflow> {
-    const ligne = await this.prisma.modeleWorkflow.findUnique({ where: { id } });
+    const ligne = await this.prisma.modeleWorkflow.findUnique({
+      where: { id },
+      include: INCLURE_CULTURE,
+    });
     if (!ligne) {
       throw introuvable({ entite: 'Modèle', id });
     }
     return versModele({ ligne });
   }
 
+  /** Les paramètres par défaut éventuels sont appliqués au graphe avant sa validation. */
   async creer({ donnees }: { donnees: CreerModele }): Promise<ModeleWorkflow> {
-    this.verifierGraphe({ graphe: donnees.graphe });
+    await this.verifierCulture({ cultureId: donnees.cultureId });
+    const parametresDefaut = donnees.parametresDefaut ?? null;
+    const graphe = ModelesService.grapheParametre({ graphe: donnees.graphe, parametresDefaut });
+    this.verifierGraphe({ graphe });
     const ligne = await executerSansDoublon({
       operation: () =>
         this.prisma.modeleWorkflow.create({
-          data: { nom: donnees.nom, description: donnees.description, graphe: donnees.graphe },
+          data: {
+            nom: donnees.nom,
+            description: donnees.description,
+            graphe,
+            cultureId: donnees.cultureId ?? null,
+            parametresDefaut: parametresDefaut ?? Prisma.DbNull,
+          },
+          include: INCLURE_CULTURE,
         }),
       messageDoublon: `Un modèle s’appelle déjà « ${donnees.nom} »`,
     });
@@ -108,12 +145,36 @@ export class ModelesService
     id: string;
     donnees: ModifierModele;
   }): Promise<ModeleWorkflow> {
-    await this.verifierModifiable({ id });
-    if (donnees.graphe) {
-      this.verifierGraphe({ graphe: donnees.graphe });
+    const actuel = await this.verifierModifiable({ id });
+    await this.verifierCulture({ cultureId: donnees.cultureId });
+    // Graphe ou paramètres modifiés : les paramètres (nouveaux ou existants) sont réappliqués.
+    const parametresDefaut =
+      donnees.parametresDefaut === undefined ? actuel.parametresDefaut : donnees.parametresDefaut;
+    const graphe =
+      donnees.graphe !== undefined || donnees.parametresDefaut !== undefined
+        ? ModelesService.grapheParametre({
+            graphe: donnees.graphe ?? actuel.graphe,
+            parametresDefaut,
+          })
+        : undefined;
+    if (graphe) {
+      this.verifierGraphe({ graphe });
     }
     const ligne = await executerSansDoublon({
-      operation: () => this.prisma.modeleWorkflow.update({ where: { id }, data: donnees }),
+      operation: () =>
+        this.prisma.modeleWorkflow.update({
+          where: { id },
+          data: {
+            nom: donnees.nom,
+            description: donnees.description,
+            graphe,
+            cultureId: donnees.cultureId,
+            ...(donnees.parametresDefaut !== undefined && {
+              parametresDefaut: donnees.parametresDefaut ?? Prisma.DbNull,
+            }),
+          },
+          include: INCLURE_CULTURE,
+        }),
       messageDoublon: `Un modèle s’appelle déjà « ${donnees.nom ?? ''} »`,
     });
     return versModele({ ligne });
@@ -124,13 +185,32 @@ export class ModelesService
     await this.prisma.modeleWorkflow.delete({ where: { id } });
   }
 
-  private async verifierModifiable({ id }: { id: string }): Promise<void> {
+  private async verifierModifiable({ id }: { id: string }): Promise<ModeleWorkflow> {
     const modele = await this.trouver({ id });
     if (modele.predefini) {
       throw new ConflictException(
         `« ${modele.nom} » est un modèle prédéfini : chargez-le puis enregistrez-le sous un autre nom`,
       );
     }
+    return modele;
+  }
+
+  private async verifierCulture({ cultureId }: { cultureId?: string | null }): Promise<void> {
+    if (cultureId && !(await this.prisma.culture.findUnique({ where: { id: cultureId } }))) {
+      throw introuvable({ entite: 'Culture', id: cultureId });
+    }
+  }
+
+  private static grapheParametre({
+    graphe,
+    parametresDefaut,
+  }: {
+    graphe: GrapheWorkflow;
+    parametresDefaut: ParametresCulture | null;
+  }): GrapheWorkflow {
+    return parametresDefaut
+      ? appliquerParametresCulture({ graphe, parametres: parametresDefaut })
+      : graphe;
   }
 
   private verifierGraphe({ graphe }: { graphe: GrapheWorkflow }): void {

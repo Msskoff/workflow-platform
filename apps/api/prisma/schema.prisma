@@ -58,6 +58,9 @@ model Campagne {
   parcelleId    String
   parcelle      Parcelle            @relation(fields: [parcelleId], references: [id], onDelete: Restrict)
   nom           String
+  /// Culture du référentiel (null : culture saisie librement dans `culture`).
+  cultureId     String?
+  cultureRef    Culture?            @relation(fields: [cultureId], references: [id], onDelete: Restrict)
   culture       String?
   /// Date calendaire AAAA-MM-JJ.
   dateDebut     String
@@ -69,6 +72,7 @@ model Campagne {
   modifieLe     DateTime            @updatedAt
 
   @@index([parcelleId])
+  @@index([cultureId])
 }
 
 /// Donnée collectée (GPS, formulaire terrain, métadonnées Sentinel-2). Immuable (triggers).
@@ -184,13 +188,35 @@ model Decision {
 /// Modèle de workflow chargeable dans l'éditeur. Les modèles prédéfinis (code non nul)
 /// sont synchronisés depuis le code au démarrage de l'API et ne sont pas modifiables.
 model ModeleWorkflow {
-  id          String   @id @default(cuid())
-  code        String?  @unique
-  nom         String   @unique
-  description String   @default("")
-  predefini   Boolean  @default(false)
+  id               String   @id @default(cuid())
+  code             String?  @unique
+  nom              String   @unique
+  description      String   @default("")
+  predefini        Boolean  @default(false)
+  /// Culture visée (null : modèle générique).
+  cultureId        String?
+  culture          Culture? @relation(fields: [cultureId], references: [id], onDelete: Restrict)
+  /// Paramètres par défaut (seuils NDVI, doses de référence, tarifs), déjà appliqués au graphe.
+  parametresDefaut Json?
   /// Graphe : nœuds (type, paramètres, position) et connexions (voir grapheWorkflowSchema).
-  graphe      Json
-  creeLe      DateTime @default(now())
-  modifieLe   DateTime @updatedAt
+  graphe           Json
+  creeLe           DateTime @default(now())
+  modifieLe        DateTime @updatedAt
+}
+
+/// Culture du référentiel : cycle et stades phénologiques (JSON, voir stadePhenologiqueSchema).
+/// Les valeurs d'exemple sont marquées aValider : à faire valider par un agronome.
+model Culture {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  nom             String           @unique
+  nomScientifique String?
+  cycleJours      Int
+  stades          Json
+  aValider        Boolean          @default(true)
+  noteValidation  String           @default("")
+  campagnes       Campagne[]
+  modeles         ModeleWorkflow[]
+  creeLe          DateTime         @default(now())
+  modifieLe       DateTime         @updatedAt
 }

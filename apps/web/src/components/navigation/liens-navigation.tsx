@@ -5,6 +5,7 @@ const LIENS = [
   { href: '/revue', libelle: 'Revue des décisions' },
   { href: '/suivi', libelle: 'Suivi de campagne' },
   { href: '/clients', libelle: 'Clients' },
+  { href: '/cultures', libelle: 'Cultures' },
 ] as const;
 
 interface LiensNavigationProps {

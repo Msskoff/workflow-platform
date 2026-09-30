@@ -8,6 +8,8 @@ import {
   decisionSchema,
   executionWorkflowSchema,
   modeleWorkflowSchema,
+  planCampagneSchema,
+  propositionCampagneSchema,
   parcelleSchema,
   resumeModeleSchema,
   SOUS_CHEMIN_LANCER_EXECUTION,
@@ -23,6 +25,8 @@ import {
   type ModeleWorkflow,
   type ModifierDecision,
   type Parcelle,
+  type PlanCampagne,
+  type PropositionCampagne,
   type ResumeModele,
   type StatutDecision,
   type WorkflowSnapshot,
@@ -241,7 +245,13 @@ export function creerParcelle({
 export function creerCampagne({
   donnees,
 }: {
-  donnees: { parcelleId: string; nom: string; culture?: string; dateDebut: string };
+  donnees: {
+    parcelleId: string;
+    nom: string;
+    cultureId?: string;
+    culture?: string;
+    dateDebut: string;
+  };
 }): Promise<Campagne> {
   return appeler({
     methode: 'POST',
@@ -275,5 +285,29 @@ export function marquerFait({
     chemin: `${apiRoutes.espaceClient}/${encodeURIComponent(jeton)}/decisions/${encodeURIComponent(decisionId)}/fait`,
     corps: { fait },
     schema: decisionClientSchema,
+  });
+}
+
+/** Modèles proposés et calendrier prévisionnel pour une culture et une date de début. */
+export function lirePropositionCulture({
+  cultureId,
+  dateDebut,
+}: {
+  cultureId: string;
+  dateDebut: string;
+}): Promise<PropositionCampagne> {
+  return appeler({
+    methode: 'GET',
+    chemin: `${apiRoutes.cultures}/${encodeURIComponent(cultureId)}/proposition?dateDebut=${encodeURIComponent(dateDebut)}`,
+    schema: propositionCampagneSchema,
+  });
+}
+
+/** Plan d'une campagne existante (modèles et calendrier selon sa culture). */
+export function lirePlanCampagne({ campagneId }: { campagneId: string }): Promise<PlanCampagne> {
+  return appeler({
+    methode: 'GET',
+    chemin: `${apiRoutes.campagnes}/${encodeURIComponent(campagneId)}/plan`,
+    schema: planCampagneSchema,
   });
 }

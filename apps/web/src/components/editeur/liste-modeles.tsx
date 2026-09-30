@@ -6,6 +6,8 @@ interface ListeModelesProps {
   modeles: readonly ResumeModele[];
   /** Modèle en cours de chargement ou actuellement ouvert. */
   modeleActifId: string | null;
+  /** Culture de la campagne choisie : ses modèles passent en tête, marqués « recommandé ». */
+  cultureRecommandee: { id: string; nom: string } | null;
   chargementEnCours: boolean;
   surChargement: (params: { modele: ResumeModele }) => void;
 }
@@ -14,16 +16,27 @@ interface ListeModelesProps {
 export function ListeModeles({
   modeles,
   modeleActifId,
+  cultureRecommandee,
   chargementEnCours,
   surChargement,
 }: ListeModelesProps) {
+  const recommande = (modele: ResumeModele) =>
+    cultureRecommandee !== null && modele.culture?.id === cultureRecommandee.id;
+  // Tri stable : les modèles de la culture de la campagne d'abord, l'ordre de l'API ensuite.
+  const tries = [...modeles].sort((a, b) => Number(recommande(b)) - Number(recommande(a)));
+
   return (
     <section className="space-y-1.5" aria-label="Modèles de workflow">
       <h2 className="text-sm font-semibold">Modèles</h2>
+      {cultureRecommandee && (
+        <p className="text-[11px] text-emerald-800">
+          Campagne de {cultureRecommandee.nom.toLowerCase()} : modèles adaptés en tête.
+        </p>
+      )}
       {modeles.length === 0 && (
         <p className="text-[11px] text-neutral-500">Aucun modèle enregistré.</p>
       )}
-      {modeles.map((modele) => (
+      {tries.map((modele) => (
         <button
           key={modele.id}
           type="button"
@@ -35,14 +48,22 @@ export function ListeModeles({
         >
           <div className="flex items-center justify-between gap-1 text-sm font-medium">
             <span className="truncate">{modele.nom}</span>
-            {modele.predefini && (
-              <span className="shrink-0 rounded bg-neutral-100 px-1 text-[10px] text-neutral-500">
-                prédéfini
+            {recommande(modele) ? (
+              <span className="shrink-0 rounded bg-emerald-100 px-1 text-[10px] text-emerald-800">
+                recommandé
               </span>
+            ) : (
+              modele.predefini && (
+                <span className="shrink-0 rounded bg-neutral-100 px-1 text-[10px] text-neutral-500">
+                  prédéfini
+                </span>
+              )
             )}
           </div>
           <div className="text-[11px] text-neutral-500">
-            {modele.nombreNoeuds} nœuds{modele.description ? ` · ${modele.description}` : ''}
+            {modele.culture && `${modele.culture.nom} · `}
+            {modele.nombreNoeuds} nœuds
+            {modele.parametresDefaut?.aValider && ' · paramètres à valider'}
           </div>
         </button>
       ))}

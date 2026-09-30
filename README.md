@@ -18,6 +18,7 @@ Node.js ≥ 22.12 et npm ≥ 10.
 npm install            # génère aussi le client Prisma (postinstall)
 cp .env.example .env   # optionnel : les valeurs par défaut conviennent en local
 npm run db:migrate     # crée/met à jour la base SQLite apps/api/prisma/dev.db
+npm run db:seed        # cultures d'exemple (maïs, manioc, cacao), à valider par un agronome
 npm run dev            # build shared, puis shared (watch) + api + web en parallèle
 ```
 
@@ -41,6 +42,7 @@ npm run dev            # build shared, puis shared (watch) + api + web en parall
 | `npm run db:migrate`  | Crée une migration à partir de `apps/api/prisma/schema.prisma` et l'applique |
 | `npm run db:generate` | Régénère le client Prisma                                                    |
 | `npm run db:studio`   | Ouvre Prisma Studio (navigateur de données)                                  |
+| `npm run db:seed`     | Cultures d'exemple (idempotent, n'écrase jamais une culture existante)       |
 
 ## Modèle métier (API)
 
@@ -158,10 +160,28 @@ comparaison), régénérables par `node scripts/generer-image-exemple.mjs` depui
   exécutable (types, ports, cycles, entrées obligatoires, paramètres).
 - Modèles prédéfinis déclarés dans `apps/api/src/modeles/modeles-predefinis.ts`, synchronisés au
   démarrage de l'API et non modifiables : **Diagnostic initial parcelle** (import GPS → reprojection
-  → contrôle qualité → surface → NDVI → zonage → règles → devis → rapport PDF).
+  → contrôle qualité → surface → NDVI → zonage → règles → devis → rapport PDF), et ses déclinaisons
+  **Diagnostic maïs / manioc / cacao** rattachées à leur culture.
 - Éditeur : la colonne de gauche liste les modèles, un clic charge le graphe. « Enregistrer comme
   modèle » garde nœuds, réglages et connexions, mais jamais les fichiers chargés (GPS, image,
   photos).
+
+## Cultures et calendrier prévisionnel
+
+- Entité `Culture` (`/cultures`) : nom, cycle en jours, stades phénologiques (durée) et leurs
+  interventions types (fertilisation, traitement, analyse satellite, observation, entretien, récolte).
+  La somme des durées des stades doit égaler le cycle.
+- Un modèle de workflow peut être rattaché à une culture et exposer des **paramètres par défaut**
+  (`parametresDefaut`) : seuils NDVI des règles, doses de référence des interventions, tarifs du devis.
+  Ils sont appliqués au graphe (`appliquerParametresCulture`, package partagé).
+- Création d'une campagne (`/clients`) : choisir la culture affiche les modèles proposés et le
+  **calendrier prévisionnel** (stades datés, interventions et doses de référence). Sur une campagne
+  existante, « voir le plan » permet d'ouvrir un modèle proposé dans l'éditeur, campagne présélectionnée.
+- API : `GET/POST /cultures`, `GET/PATCH /cultures/:id`, `GET /cultures/:id/proposition?dateDebut=`,
+  `GET /campagnes/:id/plan`, `GET /modeles?cultureId=`.
+- ⚠️ **Données d'exemple** (`apps/api/src/cultures/cultures-exemple.ts`, `npm run db:seed`) : cycles,
+  stades, doses, seuils et tarifs plausibles pour l'Afrique de l'Ouest mais **non validés** ; tout est
+  marqué `aValider` et signalé dans l'interface. À faire valider par un agronome.
 
 ## Conventions
 

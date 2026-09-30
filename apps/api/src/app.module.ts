@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CampagnesModule } from './campagnes/campagnes.module';
 import { ClientsModule } from './clients/clients.module';
+import { CulturesModule } from './cultures/cultures.module';
 import { DecisionsModule } from './decisions/decisions.module';
 import { DonneesBrutesModule } from './donnees-brutes/donnees-brutes.module';
 import { EspaceClientModule } from './espace-client/espace-client.module';
@@ -25,6 +26,7 @@ import { SuiviModule } from './suivi/suivi.module';
     DecisionsModule,
     NoeudsModule,
     ModelesModule,
+    CulturesModule,
     EspaceClientModule,
     RapportsModule,
     SuiviModule,

@@ -43,7 +43,10 @@ export class CampagnesService implements ServiceCrud<
       throw introuvable({ entite: 'Parcelle', id: donnees.parcelleId });
     }
 
-    const ligne = await this.prisma.campagne.create({ data: donnees });
+    const culture = await this.nomCulture({ cultureId: donnees.cultureId });
+    const ligne = await this.prisma.campagne.create({
+      data: { ...donnees, ...(culture !== undefined && { culture }) },
+    });
     return versCampagne({ ligne });
   }
 
@@ -56,8 +59,31 @@ export class CampagnesService implements ServiceCrud<
       throw new BadRequestException(MESSAGE_DATES_INCOHERENTES);
     }
 
-    const ligne = await this.prisma.campagne.update({ where: { id }, data: donnees });
+    const culture = await this.nomCulture({ cultureId: donnees.cultureId });
+    const ligne = await this.prisma.campagne.update({
+      where: { id },
+      data: { ...donnees, ...(culture !== undefined && { culture }) },
+    });
     return versCampagne({ ligne });
+  }
+
+  /**
+   * Culture du référentiel choisie : son nom devient celui de la campagne.
+   * `undefined` si aucune culture n'est choisie (le nom saisi est alors conservé).
+   */
+  private async nomCulture({
+    cultureId,
+  }: {
+    cultureId?: string | null;
+  }): Promise<string | undefined> {
+    if (!cultureId) {
+      return undefined;
+    }
+    const culture = await this.prisma.culture.findUnique({ where: { id: cultureId } });
+    if (!culture) {
+      throw introuvable({ entite: 'Culture', id: cultureId });
+    }
+    return culture.nom;
   }
 
   async supprimer({ id }: { id: string }): Promise<void> {

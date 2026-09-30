@@ -28,19 +28,26 @@ describe('ModelesService', () => {
 
   afterAll(() => base.fermer());
 
-  it('installe le modèle « Diagnostic initial parcelle », sans doublon au redémarrage', async () => {
+  it('installe les modèles prédéfinis, sans doublon au redémarrage', async () => {
     await service.synchroniserPredefinis();
     await service.synchroniserPredefinis();
 
-    const resumes = await service.listerResumes();
-    expect(resumes.filter((resume) => resume.predefini)).toEqual([
-      expect.objectContaining({
-        code: 'diagnostic-initial-parcelle',
-        nom: 'Diagnostic initial parcelle',
-        nombreNoeuds: 9,
-      }),
+    const predefinis = (await service.listerResumes()).filter((resume) => resume.predefini);
+    // Le diagnostic générique et ses trois déclinaisons par culture (sans culture en base :
+    // pas encore de rattachement tant que le seed n'a pas tourné).
+    expect(
+      predefinis
+        .map(({ code, culture }) => ({ code, culture }))
+        .sort((a, b) => (a.code ?? '').localeCompare(b.code ?? '')),
+    ).toEqual([
+      { code: 'diagnostic-cacao', culture: null },
+      { code: 'diagnostic-initial-parcelle', culture: null },
+      { code: 'diagnostic-mais', culture: null },
+      { code: 'diagnostic-manioc', culture: null },
     ]);
-    const types = (await service.trouver({ id: resumes[0]?.id ?? '' })).graphe.noeuds.map(
+    const generique = predefinis.find((resume) => resume.code === 'diagnostic-initial-parcelle');
+    expect(generique).toMatchObject({ nom: 'Diagnostic initial parcelle', nombreNoeuds: 9 });
+    const types = (await service.trouver({ id: generique?.id ?? '' })).graphe.noeuds.map(
       (noeud) => noeud.type,
     );
     expect(types).toEqual([

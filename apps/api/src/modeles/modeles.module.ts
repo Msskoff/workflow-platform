@@ -7,5 +7,6 @@ import { ModelesService } from './modeles.service';
   imports: [NoeudsModule],
   controllers: [ModelesController],
   providers: [ModelesService],
+  exports: [ModelesService],
 })
 export class ModelesModule {}

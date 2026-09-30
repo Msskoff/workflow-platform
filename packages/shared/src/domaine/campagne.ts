@@ -11,6 +11,9 @@ export const campagneSchema = z.object({
   id: identifiantSchema,
   parcelleId: identifiantSchema,
   nom: texteCourtSchema,
+  /** Culture choisie dans le référentiel ; `null` pour une culture saisie librement. */
+  cultureId: identifiantSchema.nullable(),
+  /** Nom de la culture (celui du référentiel si `cultureId` est renseigné). */
   culture: z.string().nullable(),
   dateDebut: dateCalendaireSchema,
   dateFin: dateCalendaireSchema.nullable(),
@@ -39,6 +42,7 @@ export const MESSAGE_DATES_INCOHERENTES =
 const champsCampagneSchema = z.object({
   parcelleId: identifiantSchema,
   nom: texteCourtSchema,
+  cultureId: identifiantSchema.nullable().optional(),
   culture: z.string().trim().min(1).max(100).nullable().optional(),
   dateDebut: dateCalendaireSchema,
   dateFin: dateCalendaireSchema.nullable().optional(),

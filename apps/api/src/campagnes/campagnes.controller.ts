@@ -8,13 +8,18 @@ import {
   type CreerCampagne,
   type FiltreCampagnes,
   type ModifierCampagne,
+  type PlanCampagne,
 } from '@workflow/shared';
+import { CulturesService } from '../cultures/cultures.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CampagnesService } from './campagnes.service';
 
 @Controller(apiRoutes.campagnes)
 export class CampagnesController {
-  constructor(private readonly campagnesService: CampagnesService) {}
+  constructor(
+    private readonly campagnesService: CampagnesService,
+    private readonly culturesService: CulturesService,
+  ) {}
 
   @Get()
   lister(
@@ -26,6 +31,12 @@ export class CampagnesController {
   @Get(':id')
   trouver(@Param('id') id: string): Promise<Campagne> {
     return this.campagnesService.trouver({ id });
+  }
+
+  /** Modèles proposés et calendrier prévisionnel selon la culture de la campagne. */
+  @Get(':id/plan')
+  plan(@Param('id') id: string): Promise<PlanCampagne> {
+    return this.culturesService.planCampagne({ campagneId: id });
   }
 
   @Post()

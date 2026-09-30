@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   apiRoutes,
   creerModeleSchema,
@@ -15,10 +15,10 @@ import { ModelesService } from './modeles.service';
 export class ModelesController {
   constructor(private readonly modelesService: ModelesService) {}
 
-  /** Liste sans les graphes ; le graphe se charge avec `GET /modeles/:id`. */
+  /** Liste sans les graphes (`?cultureId=` pour une culture) ; le graphe se charge avec `GET /modeles/:id`. */
   @Get()
-  lister(): Promise<ResumeModele[]> {
-    return this.modelesService.listerResumes();
+  lister(@Query('cultureId') cultureId?: string): Promise<ResumeModele[]> {
+    return this.modelesService.listerResumes({ filtre: { cultureId: cultureId || undefined } });
   }
 
   @Get(':id')

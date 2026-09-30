@@ -14,7 +14,13 @@ import { lireApiServeur } from '@/lib/api/api-serveur';
 // Catalogue, campagnes et modèles lus à chaque requête.
 export const dynamic = 'force-dynamic';
 
-export default async function EditeurPage() {
+interface EditeurPageProps {
+  /** `?modele=` : modèle à ouvrir ; `?campagne=` : campagne à présélectionner. */
+  searchParams: Promise<{ modele?: string | string[]; campagne?: string | string[] }>;
+}
+
+export default async function EditeurPage({ searchParams }: EditeurPageProps) {
+  const { modele, campagne } = await searchParams;
   const [catalogue, campagnes, modeles, clients, parcelles] = await Promise.all([
     lireApiServeur({ chemin: apiRoutes.noeuds, schema: z.array(descripteurNoeudSchema) }),
     lireApiServeur({ chemin: apiRoutes.campagnes, schema: z.array(campagneSchema) }),
@@ -58,6 +64,8 @@ export default async function EditeurPage() {
       campagnesInitiales={campagnes.donnees}
       libellesCampagnes={libellesCampagnes}
       modelesInitiaux={modeles.donnees}
+      modeleInitialId={typeof modele === 'string' ? modele : null}
+      campagneInitialeId={typeof campagne === 'string' ? campagne : null}
     />
   );
 }

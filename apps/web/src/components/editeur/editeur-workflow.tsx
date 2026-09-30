@@ -22,7 +22,7 @@ import {
   type NodeTypes,
   type OnConnectEnd,
 } from '@xyflow/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { creerCampagneDemo, creerModele, ErreurApi, lireModele } from '@/lib/api/api-navigateur';
 import {
   catalogueDepuis,
@@ -71,6 +71,10 @@ interface EditeurWorkflowProps {
   /** « Client · Parcelle · Campagne », par identifiant de campagne. */
   libellesCampagnes: Readonly<Record<string, string>>;
   modelesInitiaux: ResumeModele[];
+  /** Modèle à ouvrir au chargement (lien « Ouvrir dans l'éditeur » d'une campagne). */
+  modeleInitialId?: string | null;
+  /** Campagne à présélectionner au chargement. */
+  campagneInitialeId?: string | null;
 }
 
 function Editeur({
@@ -78,6 +82,8 @@ function Editeur({
   campagnesInitiales,
   libellesCampagnes,
   modelesInitiaux,
+  modeleInitialId = null,
+  campagneInitialeId = null,
 }: EditeurWorkflowProps) {
   const { fitView } = useReactFlow();
   const depart = useMemo(() => grapheDemo({ descripteurs }), [descripteurs]);
@@ -85,7 +91,11 @@ function Editeur({
   const [aretes, setAretes, surChangementAretes] = useEdgesState<Edge>(depart.aretes);
   const [identite, setIdentite] = useState<IdentiteWorkflow>(IDENTITE_LIBRE);
   const [campagnes, setCampagnes] = useState(campagnesInitiales);
-  const [campagneId, setCampagneId] = useState(campagnesInitiales[0]?.id ?? '');
+  const [campagneId, setCampagneId] = useState(
+    campagnesInitiales.find((campagne) => campagne.id === campagneInitialeId)?.id ??
+      campagnesInitiales[0]?.id ??
+      '',
+  );
   const [messageConnexion, setMessageConnexion] = useState<string | null>(null);
   const [erreursCampagne, setErreursCampagne] = useState<string[]>([]);
   const [modeles, setModeles] = useState(modelesInitiaux);
@@ -233,6 +243,24 @@ function Editeur({
     [descripteurs, setNoeuds, setAretes, reinitialiser, fitView],
   );
 
+  // Ouverture directe d'un modèle proposé pour une campagne (une seule fois).
+  const modeleInitialCharge = useRef(false);
+  useEffect(() => {
+    const modele = modeles.find((candidat) => candidat.id === modeleInitialId);
+    if (modele && !modeleInitialCharge.current) {
+      modeleInitialCharge.current = true;
+      void chargerModele({ modele });
+    }
+  }, [modeles, modeleInitialId, chargerModele]);
+
+  // Culture de la campagne choisie : ses modèles sont mis en avant.
+  const cultureCampagne = useMemo(() => {
+    const campagne = campagnes.find((candidate) => candidate.id === campagneId);
+    return campagne?.cultureId && campagne.culture
+      ? { id: campagne.cultureId, nom: campagne.culture }
+      : null;
+  }, [campagnes, campagneId]);
+
   const enregistrerModele = useCallback(
     async ({ nom, description }: { nom: string; description: string }) => {
       setEnregistrementEnCours(true);
@@ -241,18 +269,10 @@ function Editeur({
         const modele = await creerModele({
           donnees: { nom, description, graphe: grapheSansDonnees({ graphe, descripteurs }) },
         });
+        const { graphe: grapheEnregistre, ...resume } = modele;
         setModeles((existants) => [
           ...existants,
-          {
-            id: modele.id,
-            code: modele.code,
-            nom: modele.nom,
-            description: modele.description,
-            predefini: modele.predefini,
-            nombreNoeuds: modele.graphe.noeuds.length,
-            creeLe: modele.creeLe,
-            modifieLe: modele.modifieLe,
-          },
+          { ...resume, nombreNoeuds: grapheEnregistre.noeuds.length },
         ]);
         setIdentite({ workflowId: `modele-${modele.id}`, nom: modele.nom, version: 1 });
         setModeleActifId(modele.id);
@@ -341,6 +361,7 @@ function Editeur({
           <ListeModeles
             modeles={modeles}
             modeleActifId={modeleActifId}
+            cultureRecommandee={cultureCampagne}
             chargementEnCours={chargementModele}
             surChargement={({ modele }) => void chargerModele({ modele })}
           />
