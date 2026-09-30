@@ -4,6 +4,7 @@ import {
   creerExecutionWorkflowSchema,
   filtreExecutionsSchema,
   modifierExecutionWorkflowSchema,
+  SOUS_CHEMIN_LANCER_EXECUTION,
   type CreerExecutionWorkflow,
   type ExecutionWorkflow,
   type FiltreExecutions,
@@ -11,10 +12,14 @@ import {
 } from '@workflow/shared';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ExecutionsService } from './executions.service';
+import { LancementService } from './lancement.service';
 
 @Controller(apiRoutes.executions)
 export class ExecutionsController {
-  constructor(private readonly executionsService: ExecutionsService) {}
+  constructor(
+    private readonly executionsService: ExecutionsService,
+    private readonly lancementService: LancementService,
+  ) {}
 
   @Get()
   lister(
@@ -34,6 +39,13 @@ export class ExecutionsController {
     donnees: CreerExecutionWorkflow,
   ): Promise<ExecutionWorkflow> {
     return this.executionsService.creer({ donnees });
+  }
+
+  /** Lance le moteur en tâche de fond ; suivre l'avancement avec `GET /executions/:id`. */
+  @Post(`:id/${SOUS_CHEMIN_LANCER_EXECUTION}`)
+  @HttpCode(202)
+  lancer(@Param('id') id: string): Promise<ExecutionWorkflow> {
+    return this.lancementService.lancer({ id });
   }
 
   @Patch(':id')

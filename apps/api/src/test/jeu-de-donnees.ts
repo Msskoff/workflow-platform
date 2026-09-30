@@ -9,6 +9,7 @@ import type {
 import { CampagnesService } from '../campagnes/campagnes.service';
 import { ClientsService } from '../clients/clients.service';
 import { ExecutionsService } from '../executions/executions.service';
+import { creerRegistreNoeuds } from '../noeuds/registre-noeuds';
 import { ParcellesService } from '../parcelles/parcelles.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -26,15 +27,18 @@ export const GEOMETRIE_TEST: GeometrieParcelle = {
   ],
 };
 
+/** `mesure` (nombre 25) → `regle` (seuil 20), sans attente simulée. */
 export const SNAPSHOT_TEST: WorkflowSnapshot = {
   workflowId: 'wf-irrigation',
   nom: 'Irrigation',
   version: 3,
   noeuds: [
-    { id: 'collecte', type: 'collecte.formulaire', parametres: {} },
-    { id: 'regle', type: 'decision.regle', parametres: { seuilHumidite: 20 } },
+    { id: 'mesure', type: 'factice.nombre', parametres: { valeur: 25, dureeMs: 0 } },
+    { id: 'regle', type: 'factice.seuil', parametres: { seuil: 20, dureeMs: 0 } },
   ],
-  connexions: [{ id: 'c1', source: 'collecte', cible: 'regle' }],
+  connexions: [
+    { id: 'c1', source: 'mesure', sourcePort: 'nombre', cible: 'regle', ciblePort: 'valeur' },
+  ],
 };
 
 export interface JeuDeDonnees {
@@ -59,13 +63,20 @@ export async function creerJeuDeDonnees({
   return { client, parcelle, campagne };
 }
 
-/** Crée une exécution du SNAPSHOT_TEST sur la campagne donnée. */
+/** Service d'exécutions branché sur le registre de nœuds réel. */
+export function creerExecutionsService({ prisma }: { prisma: PrismaService }): ExecutionsService {
+  return new ExecutionsService(prisma, creerRegistreNoeuds());
+}
+
+/** Crée une exécution (par défaut du SNAPSHOT_TEST) sur la campagne donnée. */
 export function creerExecution({
   prisma,
   campagneId,
+  snapshot = SNAPSHOT_TEST,
 }: {
   prisma: PrismaService;
   campagneId: string;
+  snapshot?: WorkflowSnapshot;
 }): Promise<ExecutionWorkflow> {
-  return new ExecutionsService(prisma).creer({ donnees: { campagneId, snapshot: SNAPSHOT_TEST } });
+  return creerExecutionsService({ prisma }).creer({ donnees: { campagneId, snapshot } });
 }

@@ -3,7 +3,7 @@
 // Modèle métier : Client → Parcelle → Campagne → ExecutionWorkflow → Decision
 //                                        └→ DonneeBrute (données collectées, immuables)
 //
-// Suppressions : `onDelete: Restrict` partout. On ne supprime jamais un parent qui a des
+// Suppressions : `onDelete: Restrict` partout (sauf ExecutionNoeud, qui suit son exécution). On ne supprime jamais un parent qui a des
 // enfants, pour ne pas perdre la traçabilité des décisions.
 //
 // Statuts : stockés en texte, les valeurs autorisées sont définies par les schémas Zod
@@ -86,9 +86,9 @@ model DonneeBrute {
 
 /// Exécution d'un workflow. snapshot, empreinteSnapshot, version, workflowId et campagneId sont figés (trigger).
 model ExecutionWorkflow {
-  id                String     @id @default(cuid())
+  id                String           @id @default(cuid())
   campagneId        String
-  campagne          Campagne   @relation(fields: [campagneId], references: [id], onDelete: Restrict)
+  campagne          Campagne         @relation(fields: [campagneId], references: [id], onDelete: Restrict)
   workflowId        String
   /// Numéro d'exécution de ce workflow sur cette campagne : 1, 2, 3…
   version           Int
@@ -96,15 +96,34 @@ model ExecutionWorkflow {
   snapshot          Json
   empreinteSnapshot String
   /// en_attente | en_cours | terminee | echouee
-  statut            String     @default("en_attente")
+  statut            String           @default("en_attente")
   erreur            String?
   demarreeLe        DateTime?
   termineeLe        DateTime?
+  noeuds            ExecutionNoeud[]
   decisions         Decision[]
-  creeLe            DateTime   @default(now())
-  modifieLe         DateTime   @updatedAt
+  creeLe            DateTime         @default(now())
+  modifieLe         DateTime         @updatedAt
 
   @@unique([campagneId, workflowId, version])
+}
+
+/// État d'un nœud du snapshot pendant l'exécution. Supprimé avec son exécution.
+model ExecutionNoeud {
+  id          String            @id @default(cuid())
+  executionId String
+  execution   ExecutionWorkflow @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  /// Identifiant de l'instance du nœud dans le snapshot.
+  noeudId     String
+  /// en_attente | en_cours | ok | erreur
+  statut      String            @default("en_attente")
+  /// Valeurs produites par port de sortie.
+  sorties     Json?
+  erreur      String?
+  demarreLe   DateTime?
+  termineLe   DateTime?
+
+  @@unique([executionId, noeudId])
 }
 
 model Decision {

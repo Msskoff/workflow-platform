@@ -3,7 +3,12 @@ import { calculerEmpreinte } from '../common/empreinte';
 import { causeSqlite } from '../common/erreurs';
 import { creerBaseDeTest, type BaseDeTest } from '../test/base-de-test';
 import { capturerErreur } from '../test/capturer-erreur';
-import { creerExecution, creerJeuDeDonnees, SNAPSHOT_TEST } from '../test/jeu-de-donnees';
+import {
+  creerExecution,
+  creerExecutionsService,
+  creerJeuDeDonnees,
+  SNAPSHOT_TEST,
+} from '../test/jeu-de-donnees';
 import { ExecutionsService } from './executions.service';
 
 describe('ExecutionsService', () => {
@@ -12,7 +17,7 @@ describe('ExecutionsService', () => {
 
   beforeAll(() => {
     base = creerBaseDeTest();
-    service = new ExecutionsService(base.prisma);
+    service = creerExecutionsService({ prisma: base.prisma });
   });
 
   afterAll(() => base.fermer());
@@ -30,6 +35,50 @@ describe('ExecutionsService', () => {
       snapshot: SNAPSHOT_TEST,
       empreinteSnapshot: calculerEmpreinte({ valeur: SNAPSHOT_TEST }),
     });
+  });
+
+  it('crée un état en_attente par nœud du snapshot', async () => {
+    const { campagne } = await creerJeuDeDonnees({ prisma: base.prisma });
+
+    const execution = await creerExecution({ prisma: base.prisma, campagneId: campagne.id });
+
+    expect(execution.noeuds.map(({ noeudId, statut }) => ({ noeudId, statut }))).toEqual([
+      { noeudId: 'mesure', statut: 'en_attente' },
+      { noeudId: 'regle', statut: 'en_attente' },
+    ]);
+  });
+
+  it('refuse un snapshot non exécutable (types incompatibles, paramètres invalides)', async () => {
+    const { campagne } = await creerJeuDeDonnees({ prisma: base.prisma });
+    const invalide = {
+      ...SNAPSHOT_TEST,
+      noeuds: [
+        ...SNAPSHOT_TEST.noeuds,
+        { id: 'autre', type: 'factice.seuil', parametres: { seuil: 'dix' } },
+      ],
+      connexions: [
+        ...SNAPSHOT_TEST.connexions,
+        { id: 'c2', source: 'regle', sourcePort: 'depasse', cible: 'autre', ciblePort: 'valeur' },
+      ],
+    };
+
+    const erreur = await capturerErreur({
+      promesse: creerExecution({
+        prisma: base.prisma,
+        campagneId: campagne.id,
+        snapshot: invalide,
+      }),
+    });
+
+    expect(erreur).toBeInstanceOf(BadRequestException);
+    const reponse = (erreur as BadRequestException).getResponse() as {
+      erreurs: { code: string }[];
+    };
+    expect(reponse.erreurs.map((detail) => detail.code).sort()).toEqual([
+      'entree_obligatoire_manquante',
+      'parametres_invalides',
+      'types_incompatibles',
+    ]);
   });
 
   it('suit le cycle en_attente → en_cours → terminee et date chaque étape', async () => {

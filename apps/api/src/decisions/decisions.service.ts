@@ -10,7 +10,7 @@ import {
 } from '@workflow/shared';
 import { introuvable } from '../common/erreurs';
 import type { ServiceCrud } from '../common/service-crud';
-import { versExecutionWorkflow } from '../executions/executions.mapper';
+import { INCLURE_ETATS_NOEUDS, versExecutionWorkflow } from '../executions/executions.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import { versDecision } from './decisions.mapper';
 
@@ -121,7 +121,10 @@ export class DecisionsService implements ServiceCrud<
   }
 
   private async chargerExecution({ id }: { id: string }): Promise<ExecutionWorkflow> {
-    const ligne = await this.prisma.executionWorkflow.findUnique({ where: { id } });
+    const ligne = await this.prisma.executionWorkflow.findUnique({
+      where: { id },
+      include: INCLURE_ETATS_NOEUDS,
+    });
     if (!ligne) {
       throw introuvable({ entite: 'Exécution', id });
     }

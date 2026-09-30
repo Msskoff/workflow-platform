@@ -44,7 +44,7 @@ describe('règles de validation', () => {
       nom: 'Test',
       version: 1,
       noeuds: [{ id: 'n1', type: 'collecte.gps' }],
-      connexions: [{ id: 'c1', source: 'n1', cible: 'n2' }],
+      connexions: [{ id: 'c1', source: 'n1', sourcePort: 'out', cible: 'n2', ciblePort: 'in' }],
     });
 
     expect(resultat.success).toBe(false);

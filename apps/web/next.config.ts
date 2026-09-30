@@ -8,6 +8,11 @@ if (existsSync(rootEnvPath)) {
   process.loadEnvFile(rootEnvPath);
 }
 
-const nextConfig: NextConfig = {};
+const apiUrl = process.env.API_URL ?? 'http://localhost:3001';
+
+const nextConfig: NextConfig = {
+  // Le navigateur appelle l'API via `/api/*` : même origine, pas de CORS ni d'URL publique.
+  rewrites: async () => [{ source: '/api/:chemin*', destination: `${apiUrl}/:chemin*` }],
+};
 
 export default nextConfig;

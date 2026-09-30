@@ -16,6 +16,28 @@ export const transitionsStatutExecution: Transitions<StatutExecution> = {
   echouee: [],
 };
 
+export const statutsNoeud = ['en_attente', 'en_cours', 'ok', 'erreur'] as const;
+
+export const statutNoeudSchema = z.enum(statutsNoeud);
+
+export type StatutNoeud = z.infer<typeof statutNoeudSchema>;
+
+/**
+ * État d'un nœud au sein d'une exécution. Après une erreur, les nœuds suivants
+ * restent `en_attente` : ils n'ont pas été exécutés.
+ */
+export const etatNoeudSchema = z.object({
+  noeudId: identifiantSchema,
+  statut: statutNoeudSchema,
+  /** Valeurs produites sur chaque port de sortie (statut `ok`). */
+  sorties: z.record(z.string(), z.json()).nullable(),
+  erreur: z.string().nullable(),
+  demarreLe: horodatageSchema.nullable(),
+  termineLe: horodatageSchema.nullable(),
+});
+
+export type EtatNoeud = z.infer<typeof etatNoeudSchema>;
+
 /**
  * Exécution d'un workflow pour une campagne.
  * `version` numérote les exécutions d'un même workflow sur une même campagne (1, 2, 3…).
@@ -32,6 +54,8 @@ export const executionWorkflowSchema = z.object({
   erreur: z.string().nullable(),
   demarreeLe: horodatageSchema.nullable(),
   termineeLe: horodatageSchema.nullable(),
+  /** Un état par nœud du snapshot, dans l'ordre du snapshot. */
+  noeuds: z.array(etatNoeudSchema),
   creeLe: horodatageSchema,
   modifieLe: horodatageSchema,
 });

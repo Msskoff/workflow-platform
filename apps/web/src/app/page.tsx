@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ApiStatusCard } from '@/components/api-status-card';
 import { fetchApiHealth } from '@/lib/fetch-api-health';
 
@@ -13,10 +14,16 @@ export default async function HomePage() {
       <header>
         <h1 className="text-2xl font-semibold">Workflow Platform</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Squelette du monorepo : liaison front → API → types partagés.
+          Outil interne de construction des pipelines de traitement de parcelle.
         </p>
       </header>
       <ApiStatusCard apiUrl={apiUrl} result={result} />
+      <Link
+        href="/editeur"
+        className="self-start rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+      >
+        Ouvrir l&apos;éditeur de workflow
+      </Link>
     </main>
   );
 }

@@ -51,8 +51,27 @@ Types et schémas Zod dans `packages/shared/src/domaine`, modèles Prisma dans `
 | `/donnees-brutes` | Import + lecture uniquement | Immuables (triggers SQLite), empreinte SHA-256 du contenu                    |
 | `/executions`     | CRUD, filtres               | `version` incrémentée par campagne et workflow, snapshot figé (trigger)      |
 | `/decisions`      | CRUD, filtres               | Nœuds vérifiés dans le snapshot ; `brouillon → validé → envoyé`, sans retour |
+| `/noeuds`         | Lecture                     | Catalogue des types de nœuds (ports, JSON Schema des paramètres)             |
 
 Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui a des enfants.
+
+## Nœuds et moteur d'exécution
+
+- **Contrat** : `NodeDefinition` (`packages/shared/src/noeuds/node-definition.ts`) : `id`, `categorie`
+  (`collecte | standardisation | analyse | decision | restitution`), ports d'`entrees` et de `sorties`
+  typés (`packages/shared/src/noeuds/types-donnees.ts`), schéma Zod des `parametres`, et
+  `run({ inputs, params, context })`.
+- **Ajouter un nœud** : créer `apps/api/src/noeuds/definitions/<nom>.noeud.ts` avec `defineNode({...})`,
+  puis l'ajouter à la liste de `definitions/index.ts`. Le moteur ne change pas, et l'éditeur le reçoit
+  via `GET /noeuds`.
+- **Validation** : `validerWorkflow` (partagé) vérifie les ports, la compatibilité des types, les entrées
+  obligatoires et l'absence de cycle. L'éditeur l'utilise pour refuser une connexion, et le serveur
+  pour refuser une exécution (400). Le serveur valide en plus les paramètres.
+- **Exécution** : `POST /executions` (snapshot du graphe), puis `POST /executions/:id/lancer`. Le moteur
+  trie les nœuds topologiquement, les exécute dans l'ordre et enregistre le statut de chaque nœud
+  (`en_attente | en_cours | ok | erreur`), lu par l'éditeur via `GET /executions/:id`.
+- **Éditeur** : <http://localhost:3000/editeur>. Les nœuds `factice.nombre` et `factice.seuil` servent de
+  démonstration (une valeur négative fait échouer le seuil).
 
 ## Conventions
 

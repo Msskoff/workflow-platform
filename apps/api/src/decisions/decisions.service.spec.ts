@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { ExecutionsService } from '../executions/executions.service';
 import { creerBaseDeTest, type BaseDeTest } from '../test/base-de-test';
-import { creerExecution, creerJeuDeDonnees } from '../test/jeu-de-donnees';
+import { creerExecution, creerExecutionsService, creerJeuDeDonnees } from '../test/jeu-de-donnees';
 import { DecisionsService } from './decisions.service';
 
 const EXPLICATION = "Irriguer 20 mm sous 48 h car l'humidité du sol est passée sous 20 %.";
@@ -20,7 +19,7 @@ describe('DecisionsService', () => {
   async function executionTerminee(): Promise<string> {
     const { campagne } = await creerJeuDeDonnees({ prisma: base.prisma });
     const execution = await creerExecution({ prisma: base.prisma, campagneId: campagne.id });
-    const executions = new ExecutionsService(base.prisma);
+    const executions = creerExecutionsService({ prisma: base.prisma });
     await executions.modifier({ id: execution.id, donnees: { statut: 'en_cours' } });
     await executions.modifier({ id: execution.id, donnees: { statut: 'terminee' } });
     return execution.id;
@@ -30,12 +29,12 @@ describe('DecisionsService', () => {
     const executionId = await executionTerminee();
 
     const decision = await service.creer({
-      donnees: { executionId, noeudIds: ['collecte', 'regle'], explication: EXPLICATION },
+      donnees: { executionId, noeudIds: ['mesure', 'regle'], explication: EXPLICATION },
     });
 
     expect(decision).toMatchObject({
       executionId,
-      noeudIds: ['collecte', 'regle'],
+      noeudIds: ['mesure', 'regle'],
       explication: EXPLICATION,
       statut: 'brouillon',
       valideeLe: null,
@@ -81,8 +80,8 @@ describe('DecisionsService', () => {
       donnees: { executionId, noeudIds: ['regle'], explication: EXPLICATION },
     });
 
-    await expect(new ExecutionsService(base.prisma).supprimer({ id: executionId })).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      creerExecutionsService({ prisma: base.prisma }).supprimer({ id: executionId }),
+    ).rejects.toThrow(ConflictException);
   });
 });
