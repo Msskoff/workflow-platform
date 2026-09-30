@@ -70,10 +70,15 @@ export class DecisionsService implements ServiceCrud<
   /**
    * Le contenu (explication, nœuds) n'est modifiable qu'en `brouillon`.
    * Le statut avance selon `transitionsStatutDecision` ; les dates sont posées par l'API.
+   * Un rejet peut porter un motif (usage interne, jamais montré au client).
    */
   async modifier({ id, donnees }: { id: string; donnees: ModifierDecision }): Promise<Decision> {
     const actuelle = await this.trouver({ id });
-    const { explication, noeudIds, statut } = donnees;
+    const { explication, noeudIds, statut, motifRejet } = donnees;
+
+    if (motifRejet !== undefined && statut !== 'rejeté') {
+      throw new BadRequestException('Le motif de rejet n’est accepté qu’avec le statut « rejeté »');
+    }
 
     if ((explication !== undefined || noeudIds !== undefined) && actuelle.statut !== 'brouillon') {
       throw new ConflictException(
@@ -107,6 +112,8 @@ export class DecisionsService implements ServiceCrud<
         ...(changeDeStatut && { statut }),
         ...(changeDeStatut && statut === 'validé' && { valideeLe: maintenant }),
         ...(changeDeStatut && statut === 'envoyé' && { envoyeeLe: maintenant }),
+        ...(changeDeStatut &&
+          statut === 'rejeté' && { rejeteeLe: maintenant, motifRejet: motifRejet ?? null }),
       },
     });
     return versDecision({ ligne });

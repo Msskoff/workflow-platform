@@ -206,3 +206,84 @@ export function grapheDemo({ descripteurs }: { descripteurs: readonly Descripteu
   });
   return { noeuds, aretes };
 }
+
+/** Widgets dont la valeur est une donnée de parcelle (fichier, photos), pas un réglage. */
+const WIDGETS_DONNEES = new Set(['fichier-texte', 'fichier-binaire', 'photos']);
+
+type ProprieteParametre = { widget?: string; champNomFichier?: string };
+
+/**
+ * Graphe à enregistrer comme modèle : on retire les données chargées (fichier GPS, image,
+ * photos) pour ne garder que les réglages. Un modèle ne transporte pas les données d'un client.
+ */
+export function grapheSansDonnees({
+  graphe,
+  descripteurs,
+}: {
+  graphe: GrapheWorkflow;
+  descripteurs: readonly DescripteurNoeud[];
+}): GrapheWorkflow {
+  return {
+    connexions: graphe.connexions,
+    noeuds: graphe.noeuds.map((noeud) => {
+      const proprietes = (descripteurs.find((descripteur) => descripteur.id === noeud.type)
+        ?.parametres.properties ?? {}) as Record<string, ProprieteParametre>;
+      const aRetirer = new Set(
+        Object.entries(proprietes).flatMap(([nom, propriete]) =>
+          WIDGETS_DONNEES.has(propriete.widget ?? '')
+            ? [nom, ...(propriete.champNomFichier ? [propriete.champNomFichier] : [])]
+            : [],
+        ),
+      );
+      return {
+        ...noeud,
+        parametres: Object.fromEntries(
+          Object.entries(noeud.parametres).filter(([nom]) => !aRetirer.has(nom)),
+        ),
+      };
+    }),
+  };
+}
+
+/**
+ * Nœuds et arêtes React Flow d'un modèle. Les paramètres du modèle complètent les valeurs
+ * par défaut de chaque type ; un type absent du catalogue est ignoré et signalé.
+ */
+export function grapheDepuisModele({
+  graphe,
+  descripteurs,
+}: {
+  graphe: GrapheWorkflow;
+  descripteurs: readonly DescripteurNoeud[];
+}): { noeuds: NoeudEditeur[]; aretes: Edge[]; typesInconnus: string[] } {
+  const typesInconnus: string[] = [];
+  const noeuds = graphe.noeuds.flatMap((noeud, rang): NoeudEditeur[] => {
+    const descripteur = descripteurs.find((candidat) => candidat.id === noeud.type);
+    if (!descripteur) {
+      typesInconnus.push(noeud.type);
+      return [];
+    }
+    return [
+      {
+        id: noeud.id,
+        type: TYPE_NOEUD_EDITEUR,
+        position: noeud.position ?? { x: (rang % 4) * 300, y: Math.floor(rang / 4) * 220 },
+        data: {
+          descripteur,
+          parametres: { ...descripteur.parametresParDefaut, ...noeud.parametres },
+        },
+      },
+    ];
+  });
+  const presents = new Set(noeuds.map((noeud) => noeud.id));
+  const aretes = graphe.connexions
+    .filter((connexion) => presents.has(connexion.source) && presents.has(connexion.cible))
+    .map((connexion) => ({
+      id: connexion.id,
+      source: connexion.source,
+      sourceHandle: connexion.sourcePort,
+      target: connexion.cible,
+      targetHandle: connexion.ciblePort,
+    }));
+  return { noeuds, aretes, typesInconnus };
+}

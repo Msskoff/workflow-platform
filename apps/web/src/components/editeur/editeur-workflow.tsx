@@ -6,6 +6,7 @@ import {
   validerWorkflow,
   type Campagne,
   type DescripteurNoeud,
+  type ResumeModele,
 } from '@workflow/shared';
 import {
   addEdge,
@@ -15,18 +16,21 @@ import {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type NodeTypes,
   type OnConnectEnd,
 } from '@xyflow/react';
 import { useCallback, useMemo, useState } from 'react';
-import { creerCampagneDemo, ErreurApi } from '@/lib/api/api-navigateur';
+import { creerCampagneDemo, creerModele, ErreurApi, lireModele } from '@/lib/api/api-navigateur';
 import {
   catalogueDepuis,
   connexionDepuis,
   creerNoeud,
   grapheDemo,
+  grapheDepuisModele,
+  grapheSansDonnees,
   idConnexion,
   indicateursEnAmont,
   TYPE_NOEUD_EDITEUR,
@@ -36,32 +40,61 @@ import {
 } from '@/lib/editeur/graphe-editeur';
 import { useExecutionWorkflow } from '@/lib/editeur/use-execution-workflow';
 import { BarreExecution } from './barre-execution';
+import { FormulaireEnregistrerModele } from './formulaire-enregistrer-modele';
+import { ListeModeles } from './liste-modeles';
 import { NoeudWorkflow } from './noeud-workflow';
-import { PanneauNoeud } from './panneau-noeud';
 import { PaletteNoeuds } from './palette-noeuds';
+import { PanneauNoeud } from './panneau-noeud';
 
 const typesNoeuds: NodeTypes = { [TYPE_NOEUD_EDITEUR]: NoeudWorkflow };
 
-const IDENTITE_WORKFLOW = {
+/** Identité du workflow exécuté : les exécutions sont versionnées par workflow. */
+interface IdentiteWorkflow {
+  workflowId: string;
+  nom: string;
+  version: number;
+}
+
+const IDENTITE_LIBRE: IdentiteWorkflow = {
   workflowId: 'editeur-demo',
   nom: 'Workflow de démonstration',
   version: 1,
 };
 
+function messageErreur({ erreur }: { erreur: unknown }): string[] {
+  return erreur instanceof ErreurApi ? erreur.details : [String(erreur)];
+}
+
 interface EditeurWorkflowProps {
   descripteurs: DescripteurNoeud[];
   campagnesInitiales: Campagne[];
+  modelesInitiaux: ResumeModele[];
 }
 
-function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
+function Editeur({ descripteurs, campagnesInitiales, modelesInitiaux }: EditeurWorkflowProps) {
+  const { fitView } = useReactFlow();
   const depart = useMemo(() => grapheDemo({ descripteurs }), [descripteurs]);
   const [noeuds, setNoeuds, surChangementNoeuds] = useNodesState<NoeudEditeur>(depart.noeuds);
   const [aretes, setAretes, surChangementAretes] = useEdgesState<Edge>(depart.aretes);
+  const [identite, setIdentite] = useState<IdentiteWorkflow>(IDENTITE_LIBRE);
   const [campagnes, setCampagnes] = useState(campagnesInitiales);
   const [campagneId, setCampagneId] = useState(campagnesInitiales[0]?.id ?? '');
   const [messageConnexion, setMessageConnexion] = useState<string | null>(null);
   const [erreursCampagne, setErreursCampagne] = useState<string[]>([]);
-  const { execution, erreurs: erreursExecution, enCours, lancer } = useExecutionWorkflow();
+  const [modeles, setModeles] = useState(modelesInitiaux);
+  const [modeleActifId, setModeleActifId] = useState<string | null>(null);
+  const [chargementModele, setChargementModele] = useState(false);
+  const [messageModele, setMessageModele] = useState<string | null>(null);
+  const [erreursModele, setErreursModele] = useState<string[]>([]);
+  const [formulaireModeleOuvert, setFormulaireModeleOuvert] = useState(false);
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  const {
+    execution,
+    erreurs: erreursExecution,
+    enCours,
+    lancer,
+    reinitialiser,
+  } = useExecutionWorkflow();
 
   const catalogue = useMemo(() => catalogueDepuis({ descripteurs }), [descripteurs]);
   const graphe = useMemo(() => versGraphe({ noeuds, aretes }), [noeuds, aretes]);
@@ -151,13 +184,81 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
       setCampagneId(campagne.id);
       setErreursCampagne([]);
     } catch (erreur) {
-      setErreursCampagne(erreur instanceof ErreurApi ? erreur.details : [String(erreur)]);
+      setErreursCampagne(messageErreur({ erreur }));
     }
   }, []);
 
   const executer = useCallback(() => {
-    void lancer({ campagneId, snapshot: { ...IDENTITE_WORKFLOW, ...graphe } });
-  }, [lancer, campagneId, graphe]);
+    void lancer({ campagneId, snapshot: { ...identite, ...graphe } });
+  }, [lancer, campagneId, identite, graphe]);
+
+  /** Remplace le graphe par celui du modèle ; les exécutions seront versionnées sous ce modèle. */
+  const chargerModele = useCallback(
+    async ({ modele }: { modele: ResumeModele }) => {
+      setChargementModele(true);
+      setErreursModele([]);
+      try {
+        const complet = await lireModele({ id: modele.id });
+        const charge = grapheDepuisModele({ graphe: complet.graphe, descripteurs });
+        setNoeuds(charge.noeuds);
+        setAretes(charge.aretes);
+        setIdentite({
+          workflowId: `modele-${complet.code ?? complet.id}`,
+          nom: complet.nom,
+          version: 1,
+        });
+        setModeleActifId(complet.id);
+        setMessageConnexion(null);
+        reinitialiser();
+        setMessageModele(
+          charge.typesInconnus.length > 0
+            ? `Modèle « ${complet.nom} » chargé ; nœuds ignorés (types inconnus) : ${charge.typesInconnus.join(', ')}`
+            : `Modèle « ${complet.nom} » chargé.`,
+        );
+        // Recadrage une fois les nouveaux nœuds mesurés par React Flow.
+        setTimeout(() => void fitView({ maxZoom: 1, padding: 0.1 }), 100);
+      } catch (erreur) {
+        setErreursModele(messageErreur({ erreur }));
+      } finally {
+        setChargementModele(false);
+      }
+    },
+    [descripteurs, setNoeuds, setAretes, reinitialiser, fitView],
+  );
+
+  const enregistrerModele = useCallback(
+    async ({ nom, description }: { nom: string; description: string }) => {
+      setEnregistrementEnCours(true);
+      setErreursModele([]);
+      try {
+        const modele = await creerModele({
+          donnees: { nom, description, graphe: grapheSansDonnees({ graphe, descripteurs }) },
+        });
+        setModeles((existants) => [
+          ...existants,
+          {
+            id: modele.id,
+            code: modele.code,
+            nom: modele.nom,
+            description: modele.description,
+            predefini: modele.predefini,
+            nombreNoeuds: modele.graphe.noeuds.length,
+            creeLe: modele.creeLe,
+            modifieLe: modele.modifieLe,
+          },
+        ]);
+        setIdentite({ workflowId: `modele-${modele.id}`, nom: modele.nom, version: 1 });
+        setModeleActifId(modele.id);
+        setFormulaireModeleOuvert(false);
+        setMessageModele(`Modèle « ${modele.nom} » enregistré.`);
+      } catch (erreur) {
+        setErreursModele(messageErreur({ erreur }));
+      } finally {
+        setEnregistrementEnCours(false);
+      }
+    },
+    [graphe, descripteurs],
+  );
 
   // Le panneau latéral édite le nœud sélectionné (un seul à la fois).
   const noeudSelectionne = useMemo(() => {
@@ -187,6 +288,26 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
     [noeudSelectionne, setNoeuds],
   );
 
+  const complement = formulaireModeleOuvert ? (
+    <FormulaireEnregistrerModele
+      nomPropose={identite === IDENTITE_LIBRE ? '' : `${identite.nom} (copie)`}
+      enCours={enregistrementEnCours}
+      erreurs={erreursModele}
+      surEnregistrement={(valeurs) => void enregistrerModele(valeurs)}
+      surAnnulation={() => {
+        setFormulaireModeleOuvert(false);
+        setErreursModele([]);
+      }}
+    />
+  ) : messageModele || erreursModele.length > 0 ? (
+    <p
+      className={`rounded px-3 py-1.5 text-sm ${erreursModele.length > 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'}`}
+      role="status"
+    >
+      {erreursModele.length > 0 ? erreursModele.join(' ; ') : messageModele}
+    </p>
+  ) : null;
+
   return (
     <div className="flex h-screen flex-col">
       <BarreExecution
@@ -200,9 +321,23 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
         bloquants={erreursGraphe}
         erreurs={[...erreursExecution, ...erreursCampagne]}
         messageConnexion={messageConnexion}
+        nomWorkflow={identite.nom}
+        surEnregistrementModele={() => {
+          setMessageModele(null);
+          setFormulaireModeleOuvert(true);
+        }}
+        complement={complement}
       />
       <div className="flex min-h-0 flex-1">
-        <PaletteNoeuds descripteurs={descripteurs} surAjout={ajouterNoeud} />
+        <aside className="w-60 shrink-0 space-y-5 overflow-y-auto border-r border-neutral-200 bg-white p-3">
+          <ListeModeles
+            modeles={modeles}
+            modeleActifId={modeleActifId}
+            chargementEnCours={chargementModele}
+            surChargement={({ modele }) => void chargerModele({ modele })}
+          />
+          <PaletteNoeuds descripteurs={descripteurs} surAjout={ajouterNoeud} />
+        </aside>
         <div className="flex-1">
           <ReactFlow
             nodes={noeudsAffiches}
@@ -230,7 +365,7 @@ function Editeur({ descripteurs, campagnesInitiales }: EditeurWorkflowProps) {
   );
 }
 
-/** Éditeur de workflow : palette, graphe React Flow, exécution et statut par nœud. */
+/** Éditeur de workflow : modèles, palette, graphe React Flow, exécution et statut par nœud. */
 export function EditeurWorkflow(props: EditeurWorkflowProps) {
   return (
     <ReactFlowProvider>

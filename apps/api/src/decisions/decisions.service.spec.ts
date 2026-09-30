@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { creerBaseDeTest, type BaseDeTest } from '../test/base-de-test';
-import { creerExecution, creerExecutionsService, creerJeuDeDonnees } from '../test/jeu-de-donnees';
+import { creerExecutionsService, creerExecutionTerminee } from '../test/jeu-de-donnees';
 import { DecisionsService } from './decisions.service';
 
 const EXPLICATION = "Irriguer 20 mm sous 48 h car l'humidité du sol est passée sous 20 %.";
@@ -17,13 +17,45 @@ describe('DecisionsService', () => {
   afterAll(() => base.fermer());
 
   async function executionTerminee(): Promise<string> {
-    const { campagne } = await creerJeuDeDonnees({ prisma: base.prisma });
-    const execution = await creerExecution({ prisma: base.prisma, campagneId: campagne.id });
-    const executions = creerExecutionsService({ prisma: base.prisma });
-    await executions.modifier({ id: execution.id, donnees: { statut: 'en_cours' } });
-    await executions.modifier({ id: execution.id, donnees: { statut: 'terminee' } });
-    return execution.id;
+    const { executionId } = await creerExecutionTerminee({ prisma: base.prisma });
+    return executionId;
   }
+
+  it('rejette un brouillon avec un motif, puis le fige', async () => {
+    const executionId = await executionTerminee();
+    const { id } = await service.creer({
+      donnees: { executionId, noeudIds: ['regle'], explication: EXPLICATION },
+    });
+
+    await expect(
+      service.modifier({ id, donnees: { motifRejet: 'Sonde défaillante' } }),
+    ).rejects.toThrow(BadRequestException);
+    const rejetee = await service.modifier({
+      id,
+      donnees: { statut: 'rejeté', motifRejet: 'Sonde défaillante' },
+    });
+
+    expect(rejetee).toMatchObject({ statut: 'rejeté', motifRejet: 'Sonde défaillante' });
+    expect(rejetee.rejeteeLe).not.toBeNull();
+    await expect(service.modifier({ id, donnees: { statut: 'validé' } })).rejects.toThrow(
+      ConflictException,
+    );
+    await expect(service.modifier({ id, donnees: { explication: 'Autre.' } })).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('ne rejette pas une décision déjà validée', async () => {
+    const executionId = await executionTerminee();
+    const { id } = await service.creer({
+      donnees: { executionId, noeudIds: ['regle'], explication: EXPLICATION },
+    });
+    await service.modifier({ id, donnees: { statut: 'validé' } });
+
+    await expect(service.modifier({ id, donnees: { statut: 'rejeté' } })).rejects.toThrow(
+      ConflictException,
+    );
+  });
 
   it('crée un brouillon qui référence les nœuds producteurs', async () => {
     const executionId = await executionTerminee();

@@ -62,3 +62,24 @@ export async function executerSansConflit<Resultat>({
     throw erreur;
   }
 }
+
+interface ExecuterSansDoublonParams<Resultat> {
+  operation: () => Promise<Resultat>;
+  /** Message renvoyé si l'opération viole une contrainte d'unicité. */
+  messageDoublon: string;
+}
+
+/** Exécute une opération Prisma et traduit une violation d'unicité (P2002) en 409 Conflict. */
+export async function executerSansDoublon<Resultat>({
+  operation,
+  messageDoublon,
+}: ExecuterSansDoublonParams<Resultat>): Promise<Resultat> {
+  try {
+    return await operation();
+  } catch (erreur) {
+    if (erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === 'P2002') {
+      throw new ConflictException(messageDoublon);
+    }
+    throw erreur;
+  }
+}

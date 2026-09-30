@@ -2,14 +2,25 @@ import {
   apiRoutes,
   campagneSchema,
   clientSchema,
+  decisionEnRevueSchema,
+  decisionSchema,
   executionWorkflowSchema,
+  modeleWorkflowSchema,
   parcelleSchema,
+  resumeModeleSchema,
   SOUS_CHEMIN_LANCER_EXECUTION,
   type Campagne,
+  type CreerModele,
+  type Decision,
+  type DecisionEnRevue,
   type ExecutionWorkflow,
+  type ModeleWorkflow,
+  type ModifierDecision,
+  type ResumeModele,
+  type StatutDecision,
   type WorkflowSnapshot,
 } from '@workflow/shared';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 /** Préfixe réécrit par Next vers l'API (voir next.config.ts). */
 const PREFIXE_API = '/api';
@@ -42,7 +53,7 @@ function detailsErreur({ corps }: { corps: unknown }): string[] {
 }
 
 interface AppelerParams<Schema extends z.ZodType> {
-  methode: 'GET' | 'POST';
+  methode: 'GET' | 'POST' | 'PATCH';
   chemin: string;
   corps?: unknown;
   schema: Schema;
@@ -136,5 +147,60 @@ export async function creerCampagneDemo(): Promise<Campagne> {
       dateDebut: new Date().toISOString().slice(0, 10),
     },
     schema: campagneSchema,
+  });
+}
+
+/** Décisions avec leur contexte, pour l'écran de revue (toutes, ou d'un statut). */
+export function listerDecisionsEnRevue({
+  statut,
+}: {
+  statut?: StatutDecision;
+}): Promise<DecisionEnRevue[]> {
+  const requete = statut ? `?statut=${encodeURIComponent(statut)}` : '';
+  return appeler({
+    methode: 'GET',
+    chemin: `${apiRoutes.revueDecisions}${requete}`,
+    schema: z.array(decisionEnRevueSchema),
+  });
+}
+
+/** Valider, rejeter, envoyer ou modifier l'explication d'une décision. */
+export function modifierDecision({
+  id,
+  donnees,
+}: {
+  id: string;
+  donnees: ModifierDecision;
+}): Promise<Decision> {
+  return appeler({
+    methode: 'PATCH',
+    chemin: `${apiRoutes.decisions}/${id}`,
+    corps: donnees,
+    schema: decisionSchema,
+  });
+}
+
+export function listerModeles(): Promise<ResumeModele[]> {
+  return appeler({
+    methode: 'GET',
+    chemin: apiRoutes.modeles,
+    schema: z.array(resumeModeleSchema),
+  });
+}
+
+export function lireModele({ id }: { id: string }): Promise<ModeleWorkflow> {
+  return appeler({
+    methode: 'GET',
+    chemin: `${apiRoutes.modeles}/${id}`,
+    schema: modeleWorkflowSchema,
+  });
+}
+
+export function creerModele({ donnees }: { donnees: CreerModele }): Promise<ModeleWorkflow> {
+  return appeler({
+    methode: 'POST',
+    chemin: apiRoutes.modeles,
+    corps: donnees,
+    schema: modeleWorkflowSchema,
   });
 }

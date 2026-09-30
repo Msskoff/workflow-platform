@@ -1,6 +1,8 @@
 'use client';
 
 import type { Campagne, ExecutionWorkflow } from '@workflow/shared';
+import type { ReactNode } from 'react';
+import { LiensNavigation } from '@/components/navigation/liens-navigation';
 
 const LIBELLES_STATUT_EXECUTION: Readonly<Record<ExecutionWorkflow['statut'], string>> = {
   en_attente: 'en attente',
@@ -23,6 +25,11 @@ interface BarreExecutionProps {
   erreurs: readonly string[];
   /** Raison du dernier refus de connexion dans l'éditeur. */
   messageConnexion: string | null;
+  /** Nom du workflow ouvert (modèle chargé ou graphe libre). */
+  nomWorkflow: string;
+  surEnregistrementModele: () => void;
+  /** Contenu affiché sous la barre (ex. formulaire d'enregistrement de modèle). */
+  complement?: ReactNode;
 }
 
 /** Choix de la campagne, lancement de l'exécution et retours (erreurs, statut global). */
@@ -37,6 +44,9 @@ export function BarreExecution({
   bloquants,
   erreurs,
   messageConnexion,
+  nomWorkflow,
+  surEnregistrementModele,
+  complement,
 }: BarreExecutionProps) {
   const executable = campagneId !== '' && bloquants.length === 0 && !enCours;
   const problemes = [...bloquants, ...erreurs];
@@ -44,7 +54,17 @@ export function BarreExecution({
   return (
     <div className="space-y-2 border-b border-neutral-200 bg-white px-4 py-2">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-base font-semibold">Éditeur de workflow</h1>
+        <LiensNavigation actif="/editeur" />
+        <h1 className="mr-auto truncate text-base font-semibold" title={nomWorkflow}>
+          {nomWorkflow}
+        </h1>
+        <button
+          type="button"
+          onClick={surEnregistrementModele}
+          className="rounded border border-neutral-300 px-3 py-1 text-sm hover:bg-neutral-50"
+        >
+          Enregistrer comme modèle
+        </button>
 
         {campagnes.length > 0 ? (
           <label className="flex items-center gap-2 text-sm">
@@ -87,6 +107,7 @@ export function BarreExecution({
         </button>
       </div>
 
+      {complement}
       {messageConnexion && (
         <p className="rounded bg-amber-50 px-3 py-1.5 text-sm text-amber-800" role="status">
           Connexion refusée : {messageConnexion}

@@ -9,6 +9,11 @@ export const apiRoutes = {
   decisions: '/decisions',
   /** Catalogue des types de nœuds (descripteurs). */
   noeuds: '/noeuds',
+  /** Décisions avec leur contexte, pour l'écran de revue interne. */
+  revueDecisions: '/revue/decisions',
+  modeles: '/modeles',
+  /** Lecture seule pour l'espace client : décisions envoyées uniquement. */
+  espaceClient: '/espace-client',
 } as const;
 
 /** Sous-chemin de lancement d'une exécution : `POST /executions/:id/lancer`. */

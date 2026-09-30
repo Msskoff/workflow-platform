@@ -13,5 +13,6 @@ export * from './raster';
 export * from './regles';
 export * from './devis';
 export * from './workflow-snapshot';
+export * from './modele-workflow';
 export * from './execution-workflow';
 export * from './decision';

@@ -80,3 +80,17 @@ export function creerExecution({
 }): Promise<ExecutionWorkflow> {
   return creerExecutionsService({ prisma }).creer({ donnees: { campagneId, snapshot } });
 }
+
+/** Crée client, parcelle, campagne et une exécution du SNAPSHOT_TEST passée à `terminee`. */
+export async function creerExecutionTerminee({
+  prisma,
+}: {
+  prisma: PrismaService;
+}): Promise<{ executionId: string; jeu: JeuDeDonnees }> {
+  const jeu = await creerJeuDeDonnees({ prisma });
+  const execution = await creerExecution({ prisma, campagneId: jeu.campagne.id });
+  const executions = creerExecutionsService({ prisma });
+  await executions.modifier({ id: execution.id, donnees: { statut: 'en_cours' } });
+  await executions.modifier({ id: execution.id, donnees: { statut: 'terminee' } });
+  return { executionId: execution.id, jeu };
+}

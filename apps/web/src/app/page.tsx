@@ -18,12 +18,20 @@ export default async function HomePage() {
         </p>
       </header>
       <ApiStatusCard apiUrl={apiUrl} result={result} />
-      <Link
-        href="/editeur"
-        className="self-start rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-      >
-        Ouvrir l&apos;éditeur de workflow
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/editeur"
+          className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+        >
+          Ouvrir l&apos;éditeur de workflow
+        </Link>
+        <Link
+          href="/revue"
+          className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold hover:bg-neutral-100"
+        >
+          Revue des décisions
+        </Link>
+      </div>
     </main>
   );
 }

@@ -12,6 +12,7 @@ export function versDecision({ ligne }: VersDecisionParams): Decision {
     ...ligne,
     valideeLe: enIsoOuNull({ date: ligne.valideeLe }),
     envoyeeLe: enIsoOuNull({ date: ligne.envoyeeLe }),
+    rejeteeLe: enIsoOuNull({ date: ligne.rejeteeLe }),
     creeLe: ligne.creeLe.toISOString(),
     modifieLe: ligne.modifieLe.toISOString(),
   });

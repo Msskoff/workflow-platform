@@ -64,5 +64,11 @@ export function useExecutionWorkflow() {
     }
   }, []);
 
-  return { execution, erreurs, enCours, lancer };
+  /** Oublie la dernière exécution (ex. après le chargement d'un autre workflow). */
+  const reinitialiser = useCallback(() => {
+    setExecution(null);
+    setErreurs([]);
+  }, []);
+
+  return { execution, erreurs, enCours, lancer, reinitialiser };
 }

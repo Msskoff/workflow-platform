@@ -21,8 +21,12 @@ npm run db:migrate     # crée/met à jour la base SQLite apps/api/prisma/dev.db
 npm run dev            # build shared, puis shared (watch) + api + web en parallèle
 ```
 
-- Web : <http://localhost:3000> (affiche le statut de l'API et de la base)
+- Web : <http://localhost:3000> (statut de l'API et de la base), éditeur `/editeur`, revue `/revue`
 - API : <http://localhost:3001/health>
+
+> Après `npm run db:migrate` ou `npm run db:generate`, **relancez `npm run dev`** : le watcher
+> de l'API ne voit pas toujours la régénération du client Prisma et peut tourner avec un
+> client périmé (erreurs du type « Cannot read properties of undefined (reading 'findMany') »).
 
 ## Scripts racine
 
@@ -96,6 +100,27 @@ Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui
 Jeu de données d'exemple (tests et essais dans l'éditeur) : `apps/api/exemples/` (trace CSV, points
 GeoJSON, contour, contour auto-intersecté, formulaires complet et incomplet, image Sentinel-2
 synthétique `sentinel2-parcelle.tif`, régénérable par `node scripts/generer-image-exemple.mjs` depuis `apps/api`).
+
+## Revue des décisions
+
+- Cycle : `brouillon → validé → envoyé`, ou `brouillon → rejeté` (avec un motif interne facultatif).
+  Pas de retour en arrière ; l'explication n'est modifiable qu'en brouillon.
+- Écran interne `/revue` : décisions par statut et par client, avec le « pourquoi », la mesure et la
+  condition qui l'ont motivée, la chaîne des nœuds, et les actions valider, rejeter, modifier
+  l'explication et envoyer (avec confirmation).
+- Espace client : `GET /espace-client/clients/:clientId/decisions` ne renvoie **que** les décisions
+  `envoyé`, sans données internes (nœuds, motif de rejet, historique).
+
+## Modèles de workflow
+
+- `GET/POST /modeles`, `GET/PATCH/DELETE /modeles/:id`. Un modèle doit être structurellement
+  exécutable (types, ports, cycles, entrées obligatoires, paramètres).
+- Modèles prédéfinis déclarés dans `apps/api/src/modeles/modeles-predefinis.ts`, synchronisés au
+  démarrage de l'API et non modifiables : **Diagnostic initial parcelle** (import GPS → reprojection
+  → contrôle qualité → surface → NDVI → zonage → règles → devis).
+- Éditeur : la colonne de gauche liste les modèles, un clic charge le graphe. « Enregistrer comme
+  modèle » garde nœuds, réglages et connexions, mais jamais les fichiers chargés (GPS, image,
+  photos).
 
 ## Conventions
 

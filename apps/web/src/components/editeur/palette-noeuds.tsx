@@ -11,7 +11,7 @@ interface PaletteNoeudsProps {
 /** Catalogue des nœuds disponibles, regroupés par catégorie ; un clic ajoute le nœud. */
 export function PaletteNoeuds({ descripteurs, surAjout }: PaletteNoeudsProps) {
   return (
-    <aside className="w-60 shrink-0 space-y-4 overflow-y-auto border-r border-neutral-200 bg-white p-3">
+    <section className="space-y-4" aria-label="Nœuds">
       <h2 className="text-sm font-semibold">Nœuds</h2>
       {categoriesNoeud.map((categorie) => {
         const duGroupe = descripteurs.filter((descripteur) => descripteur.categorie === categorie);
@@ -39,6 +39,6 @@ export function PaletteNoeuds({ descripteurs, surAjout }: PaletteNoeudsProps) {
           </section>
         );
       })}
-    </aside>
+    </section>
   );
 }

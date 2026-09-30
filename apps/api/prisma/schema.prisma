@@ -139,12 +139,29 @@ model Decision {
   priorite       String?
   /// Données qui ont motivé la décision : indicateur, valeur, condition, nœud source.
   donnees        Json?
-  /// brouillon | validé | envoyé
+  /// brouillon | validé | envoyé | rejeté (seul envoyé est visible dans l'espace client)
   statut         String            @default("brouillon")
   valideeLe      DateTime?
   envoyeeLe      DateTime?
+  rejeteeLe      DateTime?
+  /// Raison du rejet, usage interne.
+  motifRejet     String?
   creeLe         DateTime          @default(now())
   modifieLe      DateTime          @updatedAt
 
   @@index([executionId, statut])
+}
+
+/// Modèle de workflow chargeable dans l'éditeur. Les modèles prédéfinis (code non nul)
+/// sont synchronisés depuis le code au démarrage de l'API et ne sont pas modifiables.
+model ModeleWorkflow {
+  id          String   @id @default(cuid())
+  code        String?  @unique
+  nom         String   @unique
+  description String   @default("")
+  predefini   Boolean  @default(false)
+  /// Graphe : nœuds (type, paramètres, position) et connexions (voir grapheWorkflowSchema).
+  graphe      Json
+  creeLe      DateTime @default(now())
+  modifieLe   DateTime @updatedAt
 }

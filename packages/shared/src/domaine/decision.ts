@@ -2,24 +2,36 @@ import { z } from 'zod';
 import { horodatageSchema, identifiantSchema, type Transitions } from './commun';
 import { prioriteDecisionSchema } from './regles';
 
-export const statutsDecision = ['brouillon', 'validé', 'envoyé'] as const;
+export const statutsDecision = ['brouillon', 'validé', 'envoyé', 'rejeté'] as const;
 
 export const statutDecisionSchema = z.enum(statutsDecision);
 
 export type StatutDecision = z.infer<typeof statutDecisionSchema>;
 
-/** Cycle de vie d'une décision : pas de retour en arrière. */
+export const libellesStatutsDecision: Readonly<Record<StatutDecision, string>> = {
+  brouillon: 'À valider',
+  validé: 'Validée',
+  envoyé: 'Envoyée au client',
+  rejeté: 'Rejetée',
+};
+
+/**
+ * Cycle de vie d'une décision, sans retour en arrière :
+ * `brouillon → validé → envoyé`, ou `brouillon → rejeté`.
+ * Seules les décisions `envoyé` sont visibles dans l'espace client.
+ */
 export const transitionsStatutDecision: Transitions<StatutDecision> = {
-  brouillon: ['validé'],
+  brouillon: ['validé', 'rejeté'],
   validé: ['envoyé'],
   envoyé: [],
+  rejeté: [],
 };
 
 /** Explication lisible par le fermier : une seule phrase, sans retour à la ligne. */
 export const explicationSchema = z
   .string()
   .trim()
-  .min(1)
+  .min(1, 'L’explication est obligatoire')
   .max(300)
   .refine((texte) => !/[\r\n]/.test(texte), {
     message: "L'explication doit tenir en une seule phrase, sans retour à la ligne",
@@ -49,6 +61,9 @@ export const decisionSchema = z.object({
   statut: statutDecisionSchema,
   valideeLe: horodatageSchema.nullable(),
   envoyeeLe: horodatageSchema.nullable(),
+  rejeteeLe: horodatageSchema.nullable(),
+  /** Raison donnée par l'agronome lors du rejet (usage interne). */
+  motifRejet: z.string().nullable(),
   creeLe: horodatageSchema,
   modifieLe: horodatageSchema,
 });
@@ -67,11 +82,15 @@ export const creerDecisionSchema = z.object({
 
 export type CreerDecision = z.infer<typeof creerDecisionSchema>;
 
-/** Le contenu n'est modifiable qu'en `brouillon` ; le statut suit `transitionsStatutDecision`. */
+/**
+ * Le contenu n'est modifiable qu'en `brouillon` ; le statut suit `transitionsStatutDecision`.
+ * `motifRejet` n'est accepté qu'avec le passage à `rejeté`.
+ */
 export const modifierDecisionSchema = z.object({
   noeudIds: noeudIdsSchema.optional(),
   explication: explicationSchema.optional(),
   statut: statutDecisionSchema.optional(),
+  motifRejet: z.string().trim().min(1).max(500).optional(),
 });
 
 export type ModifierDecision = z.infer<typeof modifierDecisionSchema>;
@@ -82,3 +101,44 @@ export const filtreDecisionsSchema = z.object({
 });
 
 export type FiltreDecisions = z.infer<typeof filtreDecisionsSchema>;
+
+export const filtreRevueSchema = z.object({
+  statut: statutDecisionSchema.optional(),
+  clientId: identifiantSchema.optional(),
+});
+
+export type FiltreRevue = z.infer<typeof filtreRevueSchema>;
+
+/** Contexte d'une décision pour l'écran de revue : d'où vient-elle, pour qui ? */
+export const decisionEnRevueSchema = z.object({
+  decision: decisionSchema,
+  execution: z.object({
+    id: identifiantSchema,
+    version: z.int().positive(),
+    workflowNom: z.string(),
+    termineeLe: horodatageSchema.nullable(),
+  }),
+  campagne: z.object({ id: identifiantSchema, nom: z.string() }),
+  parcelle: z.object({ id: identifiantSchema, nom: z.string(), surfaceHa: z.number() }),
+  client: z.object({ id: identifiantSchema, nom: z.string() }),
+  /** Libellés des nœuds de la chaîne de traçabilité, dans l'ordre de `decision.noeudIds`. */
+  chaine: z.array(z.object({ noeudId: z.string(), type: z.string(), libelle: z.string() })),
+});
+
+export type DecisionEnRevue = z.infer<typeof decisionEnRevueSchema>;
+
+/**
+ * Ce que voit le client : uniquement les décisions `envoyé`, sans les données internes
+ * (nœuds, motif de rejet, historique de validation).
+ */
+export const decisionClientSchema = z.object({
+  id: identifiantSchema,
+  parcelle: z.object({ id: identifiantSchema, nom: z.string() }),
+  campagne: z.object({ id: identifiantSchema, nom: z.string() }),
+  recommandation: z.string().nullable(),
+  explication: z.string(),
+  priorite: prioriteDecisionSchema.nullable(),
+  envoyeeLe: horodatageSchema,
+});
+
+export type DecisionClient = z.infer<typeof decisionClientSchema>;
