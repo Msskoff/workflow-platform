@@ -19,6 +19,18 @@ export const prioriteDecisionSchema = z.enum(prioritesDecision);
 
 export type PrioriteDecision = z.infer<typeof prioriteDecisionSchema>;
 
+/** Priorité formulée pour l'agriculteur (rapport PDF, espace client). */
+export const libellesPrioriteClient: Readonly<Record<PrioriteDecision, string>> = {
+  haute: 'À faire en priorité',
+  normale: 'Recommandé',
+  basse: 'Si possible',
+};
+
+/** Rang d'affichage : la priorité haute d'abord (une priorité absente compte comme normale). */
+export function rangPriorite({ priorite }: { priorite: PrioriteDecision | null }): number {
+  return { haute: 0, normale: 1, basse: 2 }[priorite ?? 'normale'];
+}
+
 /** Variables utilisables dans le modèle d'explication d'une règle. */
 export const variablesExplication = ['valeur', 'seuil', 'indicateur'] as const;
 

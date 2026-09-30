@@ -3,6 +3,7 @@ import { devisSchema } from '../domaine/devis';
 import { formulaireTerrainSchema } from '../domaine/formulaire-terrain';
 import { indicateursSchema } from '../domaine/indicateurs';
 import { rapportQualiteSchema } from '../domaine/rapport-qualite';
+import { rapportParcelleSchema } from '../domaine/rapport';
 import { rasterNdviSchema, zonageSchema } from '../domaine/raster';
 import { resultatReglesSchema } from '../domaine/regles';
 import { geometrieGeoreferenceeSchema } from '../domaine/systemes-coordonnees';
@@ -24,6 +25,7 @@ export const typesDonnees = {
   zonage: { libelle: 'Zonage', schema: zonageSchema },
   decisions: { libelle: 'Décisions', schema: resultatReglesSchema },
   devis: { libelle: 'Devis', schema: devisSchema },
+  rapport_parcelle: { libelle: 'Rapport', schema: rapportParcelleSchema },
 } as const satisfies Record<string, { libelle: string; schema: z.ZodType }>;
 
 export type TypeDonnee = keyof typeof typesDonnees;

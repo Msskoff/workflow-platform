@@ -68,10 +68,17 @@ function messageErreur({ erreur }: { erreur: unknown }): string[] {
 interface EditeurWorkflowProps {
   descripteurs: DescripteurNoeud[];
   campagnesInitiales: Campagne[];
+  /** « Client · Parcelle · Campagne », par identifiant de campagne. */
+  libellesCampagnes: Readonly<Record<string, string>>;
   modelesInitiaux: ResumeModele[];
 }
 
-function Editeur({ descripteurs, campagnesInitiales, modelesInitiaux }: EditeurWorkflowProps) {
+function Editeur({
+  descripteurs,
+  campagnesInitiales,
+  libellesCampagnes,
+  modelesInitiaux,
+}: EditeurWorkflowProps) {
   const { fitView } = useReactFlow();
   const depart = useMemo(() => grapheDemo({ descripteurs }), [descripteurs]);
   const [noeuds, setNoeuds, surChangementNoeuds] = useNodesState<NoeudEditeur>(depart.noeuds);
@@ -312,6 +319,7 @@ function Editeur({ descripteurs, campagnesInitiales, modelesInitiaux }: EditeurW
     <div className="flex h-screen flex-col">
       <BarreExecution
         campagnes={campagnes}
+        libellesCampagnes={libellesCampagnes}
         campagneId={campagneId}
         surChoixCampagne={({ campagneId: choisie }) => setCampagneId(choisie)}
         surCreationCampagneDemo={() => void creerCampagne()}
@@ -359,6 +367,7 @@ function Editeur({ descripteurs, campagnesInitiales, modelesInitiaux }: EditeurW
           noeud={noeudSelectionne}
           indicateursDisponibles={indicateursDisponibles}
           surChangementParametres={modifierParametres}
+          executionId={execution?.id ?? null}
         />
       </div>
     </div>

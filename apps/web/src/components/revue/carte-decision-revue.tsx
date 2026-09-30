@@ -6,6 +6,7 @@ import { ActionsDecision } from './actions-decision';
 import { BadgeStatutDecision } from './badge-statut-decision';
 import { DonneesSources } from './donnees-sources';
 import { EditeurExplication } from './editeur-explication';
+import { LienApercuRapport } from './lien-apercu-rapport';
 
 function dateCourte({ iso }: { iso: string | null }): string | null {
   return iso
@@ -73,6 +74,8 @@ export function CarteDecisionRevue({
         <p className="text-[11px] text-neutral-500">
           {execution.workflowNom} v{execution.version}
           {jalons.map((jalon) => ` · ${jalon.libelle} ${jalon.date}`).join('')}
+          <br />
+          <LienApercuRapport executionId={execution.id} />
         </p>
         <ActionsDecision
           statut={decision.statut}

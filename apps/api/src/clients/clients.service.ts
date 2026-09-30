@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { Client, CreerClient, FiltreClients, ModifierClient } from '@workflow/shared';
+import type {
+  AccesClient,
+  Client,
+  CreerClient,
+  FiltreClients,
+  ModifierClient,
+} from '@workflow/shared';
 import { executerSansConflit, introuvable } from '../common/erreurs';
+import { empreinteJeton, genererJeton } from '../common/jeton';
 import type { ServiceCrud } from '../common/service-crud';
 import { PrismaService } from '../prisma/prisma.service';
 import { versClient } from './clients.mapper';
@@ -47,5 +54,20 @@ export class ClientsService implements ServiceCrud<
       operation: () => this.prisma.client.delete({ where: { id } }),
       messageConflit: `Le client ${id} possède des parcelles : supprimez-les d'abord`,
     });
+  }
+
+  /**
+   * Génère le lien d'accès à l'espace client. Seule l'empreinte du jeton est stockée ;
+   * générer un nouveau lien révoque le précédent.
+   */
+  async genererAcces({ id }: { id: string }): Promise<AccesClient> {
+    await this.trouver({ id });
+    const jeton = genererJeton();
+    const creeLe = new Date();
+    await this.prisma.client.update({
+      where: { id },
+      data: { jetonAccesHash: empreinteJeton({ jeton }), jetonAccesCreeLe: creeLe },
+    });
+    return { jeton, creeLe: creeLe.toISOString() };
   }
 }

@@ -88,6 +88,7 @@ Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui
 | Zonage               | `analyse.zonage`                   | N zones de NDVI homogène (k-means ou quantiles) + statistiques par zone        |
 | Règles métier        | `decision.regles_metier`           | Si indicateur ⋚ seuil → décision (recommandation + explication + motif)        |
 | Devis                | `restitution.devis`                | Surface × tarif/ha par service, frais fixes, TVA (indicatif, pas de facture)   |
+| Rapport PDF          | `restitution.rapport_pdf`          | Fige carte, zones, indicateurs et devis ; PDF généré à la demande              |
 | Nombre / Seuil       | `factice.*`                        | Nœuds de démonstration du moteur                                               |
 
 - **Indicateurs** : les nœuds d'analyse publient une sortie `indicateurs` (clés du catalogue
@@ -99,7 +100,8 @@ Toutes les suppressions sont en `Restrict` : on ne supprime jamais un parent qui
 
 Jeu de données d'exemple (tests et essais dans l'éditeur) : `apps/api/exemples/` (trace CSV, points
 GeoJSON, contour, contour auto-intersecté, formulaires complet et incomplet, image Sentinel-2
-synthétique `sentinel2-parcelle.tif`, régénérable par `node scripts/generer-image-exemple.mjs` depuis `apps/api`).
+synthétiques `sentinel2-parcelle.tif` et `sentinel2-parcelle-juin.tif` (seconde date, pour la
+comparaison), régénérables par `node scripts/generer-image-exemple.mjs` depuis `apps/api`).
 
 ## Revue des décisions
 
@@ -108,8 +110,27 @@ synthétique `sentinel2-parcelle.tif`, régénérable par `node scripts/generer-
 - Écran interne `/revue` : décisions par statut et par client, avec le « pourquoi », la mesure et la
   condition qui l'ont motivée, la chaîne des nœuds, et les actions valider, rejeter, modifier
   l'explication et envoyer (avec confirmation).
-- Espace client : `GET /espace-client/clients/:clientId/decisions` ne renvoie **que** les décisions
-  `envoyé`, sans données internes (nœuds, motif de rejet, historique).
+- Chaque carte de décision propose l'**aperçu du rapport PDF** de son exécution
+  (`GET /executions/:id/rapport.pdf` : décisions validées et envoyées, bandeau « Aperçu interne »).
+
+## Rapport PDF et espace client
+
+- **Rapport PDF** : le nœud `restitution.rapport_pdf` fige, à l'exécution, la carte (contour et zones
+  dans un même système métrique), les indicateurs et le devis. Le PDF (`apps/api/src/rapports/`,
+  pdfkit + Poppins) est produit à la demande avec les 3 à 5 décisions les plus prioritaires : en
+  français simple, carte colorée, « Pourquoi ? » de chaque recommandation, actions à suivre, devis.
+- **Accès client** : page interne `/clients` (créer client, parcelle depuis un contour GeoJSON,
+  campagne) puis « Générer le lien d'accès » (`POST /clients/:id/acces`). Le lien contient un jeton
+  aléatoire de 256 bits, affiché une seule fois ; seule son empreinte SHA-256 est stockée. Régénérer
+  le lien révoque l'ancien. Pas de compte ni de mot de passe.
+- **Espace client** (`/espace`, séparé de l'éditeur, en lecture seule, non indexé, sans referrer) :
+  saisie du code ou du lien, liste des parcelles, puis par parcelle : carte des zones colorées et
+  légende, chiffres clés, recommandations avec leur « pourquoi », actions à suivre, comparaison de deux
+  analyses, chronologie de la saison et téléchargement du PDF.
+- Le client ne voit que les analyses **publiées** (exécution terminée avec un rapport et au moins une
+  décision `envoyé`) et, dans celles-ci, uniquement les décisions `envoyé`.
+- API : `GET /espace-client/:jeton`, `GET /espace-client/:jeton/parcelles/:id`,
+  `GET /espace-client/:jeton/parcelles/:id/rapport.pdf?analyse=` (jeton inconnu ou révoqué : 404).
 
 ## Modèles de workflow
 
@@ -117,7 +138,7 @@ synthétique `sentinel2-parcelle.tif`, régénérable par `node scripts/generer-
   exécutable (types, ports, cycles, entrées obligatoires, paramètres).
 - Modèles prédéfinis déclarés dans `apps/api/src/modeles/modeles-predefinis.ts`, synchronisés au
   démarrage de l'API et non modifiables : **Diagnostic initial parcelle** (import GPS → reprojection
-  → contrôle qualité → surface → NDVI → zonage → règles → devis).
+  → contrôle qualité → surface → NDVI → zonage → règles → devis → rapport PDF).
 - Éditeur : la colonne de gauche liste les modèles, un clic charge le graphe. « Enregistrer comme
   modèle » garde nœuds, réglages et connexions, mais jamais les fichiers chargés (GPS, image,
   photos).

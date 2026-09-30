@@ -10,6 +10,7 @@ import { ModelesModule } from './modeles/modeles.module';
 import { NoeudsModule } from './noeuds/noeuds.module';
 import { ParcellesModule } from './parcelles/parcelles.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RapportsModule } from './rapports/rapports.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PrismaModule } from './prisma/prisma.module';
     NoeudsModule,
     ModelesModule,
     EspaceClientModule,
+    RapportsModule,
   ],
 })
 export class AppModule {}

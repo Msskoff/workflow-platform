@@ -13,6 +13,8 @@ const LIBELLES_STATUT_EXECUTION: Readonly<Record<ExecutionWorkflow['statut'], st
 
 interface BarreExecutionProps {
   campagnes: readonly Campagne[];
+  /** Libellé complet d'une campagne (client · parcelle · campagne) ; son nom à défaut. */
+  libellesCampagnes: Readonly<Record<string, string>>;
   campagneId: string;
   surChoixCampagne: (params: { campagneId: string }) => void;
   surCreationCampagneDemo: () => void;
@@ -35,6 +37,7 @@ interface BarreExecutionProps {
 /** Choix de la campagne, lancement de l'exécution et retours (erreurs, statut global). */
 export function BarreExecution({
   campagnes,
+  libellesCampagnes,
   campagneId,
   surChoixCampagne,
   surCreationCampagneDemo,
@@ -76,7 +79,7 @@ export function BarreExecution({
             >
               {campagnes.map((campagne) => (
                 <option key={campagne.id} value={campagne.id}>
-                  {campagne.nom}
+                  {libellesCampagnes[campagne.id] ?? campagne.nom}
                 </option>
               ))}
             </select>

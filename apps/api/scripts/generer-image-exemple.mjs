@@ -1,4 +1,4 @@
-// Génère exemples/sentinel2-parcelle.tif : image synthétique au format Sentinel-2 L2A
+// Génère exemples/sentinel2-parcelle.tif et sentinel2-parcelle-juin.tif : images synthétiques au format Sentinel-2 L2A
 // (B04 rouge, B08 proche infrarouge, uint16, réflectance × 10 000, 10 m, UTM 31N)
 // couvrant la parcelle d'exemple, avec trois bandes de vigueur d'ouest en est.
 // Usage : node scripts/generer-image-exemple.mjs (depuis apps/api)
@@ -23,41 +23,58 @@ const yMax = Math.ceil((Math.max(coins[0][1], coins[1][1]) + MARGE) / RESOLUTION
 const largeur = (xMax - xMin) / RESOLUTION;
 const hauteur = (yMax - yMin) / RESOLUTION;
 
-// Générateur pseudo-aléatoire déterministe : l'image est identique à chaque génération.
-let graine = 42;
-const aleatoire = () => {
-  graine = (graine * 1_103_515_245 + 12_345) % 2 ** 31;
-  return graine / 2 ** 31;
-};
+/**
+ * Écrit une image : trois bandes de vigueur d'ouest en est (NDVI cibles), bruit déterministe.
+ * `graine` fixe le bruit : l'image est identique à chaque génération.
+ */
+function generer({ fichier, ndviBandes, graine: graineInitiale }) {
+  let graine = graineInitiale;
+  const aleatoire = () => {
+    graine = (graine * 1_103_515_245 + 12_345) % 2 ** 31;
+    return graine / 2 ** 31;
+  };
 
-const valeurs = new Uint16Array(largeur * hauteur * 2);
-for (let ligne = 0; ligne < hauteur; ligne++) {
-  for (let colonne = 0; colonne < largeur; colonne++) {
-    const x = xMin + (colonne + 0.5) * RESOLUTION;
-    const position = (x - xMin - MARGE) / (xMax - xMin - 2 * MARGE);
-    const dansChamp = position >= 0 && position <= 1 && ligne >= 3 && ligne < hauteur - 3;
-    const ndviCible = !dansChamp ? 0.15 : position < 1 / 3 ? 0.35 : position < 2 / 3 ? 0.6 : 0.8;
-    const ndvi = ndviCible + (aleatoire() - 0.5) * 0.06;
-    const rouge = Math.round(700 + (aleatoire() - 0.5) * 80);
-    const pir = Math.round((rouge * (1 + ndvi)) / (1 - ndvi));
-    const index = (ligne * largeur + colonne) * 2;
-    valeurs[index] = rouge;
-    valeurs[index + 1] = pir;
+  const valeurs = new Uint16Array(largeur * hauteur * 2);
+  for (let ligne = 0; ligne < hauteur; ligne++) {
+    for (let colonne = 0; colonne < largeur; colonne++) {
+      const x = xMin + (colonne + 0.5) * RESOLUTION;
+      const position = (x - xMin - MARGE) / (xMax - xMin - 2 * MARGE);
+      const dansChamp = position >= 0 && position <= 1 && ligne >= 3 && ligne < hauteur - 3;
+      const [ouest, centre, est] = ndviBandes;
+      const ndviCible = !dansChamp
+        ? 0.15
+        : position < 1 / 3
+          ? ouest
+          : position < 2 / 3
+            ? centre
+            : est;
+      const ndvi = ndviCible + (aleatoire() - 0.5) * 0.06;
+      const rouge = Math.round(700 + (aleatoire() - 0.5) * 80);
+      const pir = Math.round((rouge * (1 + ndvi)) / (1 - ndvi));
+      const index = (ligne * largeur + colonne) * 2;
+      valeurs[index] = rouge;
+      valeurs[index + 1] = pir;
+    }
   }
+
+  const contenu = writeArrayBuffer(valeurs, {
+    width: largeur,
+    height: hauteur,
+    SamplesPerPixel: 2,
+    BitsPerSample: [16, 16],
+    SampleFormat: [1, 1],
+    ModelPixelScale: [RESOLUTION, RESOLUTION, 0],
+    ModelTiepoint: [0, 0, 0, xMin, yMax, 0],
+    GTModelTypeGeoKey: 1,
+    ProjectedCSTypeGeoKey: 32631,
+  });
+
+  const destination = fileURLToPath(new URL(`../exemples/${fichier}`, import.meta.url));
+  writeFileSync(destination, Buffer.from(contenu));
+  console.log(`${destination} : ${largeur} × ${hauteur} pixels, ${contenu.byteLength} octets`);
 }
 
-const contenu = writeArrayBuffer(valeurs, {
-  width: largeur,
-  height: hauteur,
-  SamplesPerPixel: 2,
-  BitsPerSample: [16, 16],
-  SampleFormat: [1, 1],
-  ModelPixelScale: [RESOLUTION, RESOLUTION, 0],
-  ModelTiepoint: [0, 0, 0, xMin, yMax, 0],
-  GTModelTypeGeoKey: 1,
-  ProjectedCSTypeGeoKey: 32631,
-});
-
-const destination = fileURLToPath(new URL('../exemples/sentinel2-parcelle.tif', import.meta.url));
-writeFileSync(destination, Buffer.from(contenu));
-console.log(`${destination} : ${largeur} × ${hauteur} pixels, ${contenu.byteLength} octets`);
+// Début de printemps : vigueur contrastée.
+generer({ fichier: 'sentinel2-parcelle.tif', ndviBandes: [0.35, 0.6, 0.8], graine: 42 });
+// Fin de printemps : végétation plus développée, zone faible en rattrapage.
+generer({ fichier: 'sentinel2-parcelle-juin.tif', ndviBandes: [0.58, 0.72, 0.84], graine: 7 });

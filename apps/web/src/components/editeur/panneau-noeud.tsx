@@ -16,6 +16,8 @@ interface PanneauNoeudProps {
   /** Indicateurs publiés par les nœuds connectés en entrée (pour l'éditeur de règles). */
   indicateursDisponibles: readonly IndicateurDisponible[];
   surChangementParametres: (params: { parametres: NoeudWorkflow['parametres'] }) => void;
+  /** Dernière exécution du workflow, `null` avant la première. */
+  executionId: string | null;
 }
 
 /** Panneau latéral : paramètres du nœud sélectionné et résultat de sa dernière exécution. */
@@ -23,6 +25,7 @@ export function PanneauNoeud({
   noeud,
   indicateursDisponibles,
   surChangementParametres,
+  executionId,
 }: PanneauNoeudProps) {
   if (!noeud) {
     return (
@@ -80,7 +83,7 @@ export function PanneauNoeud({
           <h3 className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Dernière exécution <BadgeStatutNoeud statut={etat.statut} />
           </h3>
-          <ApercuSorties descripteur={descripteur} etat={etat} />
+          <ApercuSorties descripteur={descripteur} etat={etat} executionId={executionId} />
         </section>
       )}
     </aside>

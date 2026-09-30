@@ -31,6 +31,12 @@ export default async function HomePage() {
         >
           Revue des décisions
         </Link>
+        <Link
+          href="/clients"
+          className="rounded border border-neutral-300 px-4 py-2 text-sm font-semibold hover:bg-neutral-100"
+        >
+          Clients
+        </Link>
       </div>
     </main>
   );

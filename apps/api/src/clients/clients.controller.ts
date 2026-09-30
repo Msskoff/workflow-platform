@@ -4,6 +4,7 @@ import {
   creerClientSchema,
   filtreClientsSchema,
   modifierClientSchema,
+  type AccesClient,
   type Client,
   type CreerClient,
   type FiltreClients,
@@ -41,6 +42,12 @@ export class ClientsController {
     @Body(new ZodValidationPipe({ schema: modifierClientSchema })) donnees: ModifierClient,
   ): Promise<Client> {
     return this.clientsService.modifier({ id, donnees });
+  }
+
+  /** Nouveau lien d'accès à l'espace client (révoque le précédent). Le jeton n'est montré qu'ici. */
+  @Post(':id/acces')
+  genererAcces(@Param('id') id: string): Promise<AccesClient> {
+    return this.clientsService.genererAcces({ id });
   }
 
   @Delete(':id')

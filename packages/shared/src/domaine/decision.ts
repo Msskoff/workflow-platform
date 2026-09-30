@@ -133,6 +133,8 @@ export type DecisionEnRevue = z.infer<typeof decisionEnRevueSchema>;
  */
 export const decisionClientSchema = z.object({
   id: identifiantSchema,
+  /** Analyse (exécution) qui a produit la décision. */
+  analyseId: identifiantSchema,
   parcelle: z.object({ id: identifiantSchema, nom: z.string() }),
   campagne: z.object({ id: identifiantSchema, nom: z.string() }),
   recommandation: z.string().nullable(),

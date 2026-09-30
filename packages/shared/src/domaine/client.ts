@@ -7,6 +7,8 @@ export const clientSchema = z.object({
   nom: texteCourtSchema,
   email: z.email().nullable(),
   telephone: z.string().nullable(),
+  /** Un lien d'accès à l'espace client a été généré (le jeton n'est jamais renvoyé). */
+  accesActif: z.boolean(),
   creeLe: horodatageSchema,
   modifieLe: horodatageSchema,
 });

@@ -2,6 +2,7 @@ import {
   devisSchema,
   geometrieGeoreferenceeSchema,
   indicateursSchema,
+  rapportParcelleSchema,
   rapportQualiteSchema,
   rasterNdviSchema,
   resultatReglesSchema,
@@ -13,6 +14,7 @@ import {
 import { VueDecisions } from './vue-decisions';
 import { VueDevis } from './vue-devis';
 import { VueIndicateurs } from './vue-indicateurs';
+import { VueRapportParcelle } from './vue-rapport-parcelle';
 import { VueRapportQualite } from './vue-rapport-qualite';
 import { VueRasterNdvi } from './vue-raster-ndvi';
 import { VueZonage } from './vue-zonage';
@@ -20,10 +22,11 @@ import { VueZonage } from './vue-zonage';
 interface ApercuValeurProps {
   type: DescripteurNoeud['sorties'][string]['type'];
   valeur: unknown;
+  executionId: string | null;
 }
 
 /** Affichage adapté au type de données (carte, tableau, rapport…), sinon JSON brut. */
-function ApercuValeur({ type, valeur }: ApercuValeurProps) {
+function ApercuValeur({ type, valeur, executionId }: ApercuValeurProps) {
   switch (type) {
     case 'raster_ndvi': {
       const raster = rasterNdviSchema.safeParse(valeur);
@@ -50,6 +53,13 @@ function ApercuValeur({ type, valeur }: ApercuValeurProps) {
       const resultat = resultatReglesSchema.safeParse(valeur);
       if (resultat.success) {
         return <VueDecisions resultat={resultat.data} />;
+      }
+      break;
+    }
+    case 'rapport_parcelle': {
+      const rapport = rapportParcelleSchema.safeParse(valeur);
+      if (rapport.success) {
+        return <VueRapportParcelle rapport={rapport.data} executionId={executionId} />;
       }
       break;
     }
@@ -99,10 +109,12 @@ function ApercuValeur({ type, valeur }: ApercuValeurProps) {
 interface ApercuSortiesProps {
   descripteur: DescripteurNoeud;
   etat: EtatNoeud;
+  /** Dernière exécution (liens vers ses documents). */
+  executionId: string | null;
 }
 
 /** Sorties produites par un nœud lors de la dernière exécution. */
-export function ApercuSorties({ descripteur, etat }: ApercuSortiesProps) {
+export function ApercuSorties({ descripteur, etat, executionId }: ApercuSortiesProps) {
   if (etat.statut === 'erreur') {
     return <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{etat.erreur}</p>;
   }
@@ -119,7 +131,7 @@ export function ApercuSorties({ descripteur, etat }: ApercuSortiesProps) {
               {typesDonnees[port.type].libelle}
             </span>
           </div>
-          <ApercuValeur type={port.type} valeur={etat.sorties?.[nom]} />
+          <ApercuValeur type={port.type} valeur={etat.sorties?.[nom]} executionId={executionId} />
         </div>
       ))}
     </div>

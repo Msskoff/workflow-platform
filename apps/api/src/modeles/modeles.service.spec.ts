@@ -1,12 +1,10 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import type { GrapheWorkflow, WorkflowSnapshot } from '@workflow/shared';
+import type { GrapheWorkflow } from '@workflow/shared';
 import { DecisionsService } from '../decisions/decisions.service';
-import { LancementService } from '../executions/lancement.service';
 import { creerRegistreNoeuds } from '../noeuds/registre-noeuds';
 import { creerBaseDeTest, type BaseDeTest } from '../test/base-de-test';
-import { creerExecution, creerExecutionsService, creerJeuDeDonnees } from '../test/jeu-de-donnees';
-import { lireExemple, lireExempleBase64 } from '../test/noeuds';
-import { DIAGNOSTIC_INITIAL_PARCELLE } from './modeles-predefinis';
+import { executerDiagnostic } from '../test/diagnostic';
+import { creerJeuDeDonnees } from '../test/jeu-de-donnees';
 import { ModelesService } from './modeles.service';
 
 const GRAPHE_SIMPLE: GrapheWorkflow = {
@@ -39,7 +37,7 @@ describe('ModelesService', () => {
       expect.objectContaining({
         code: 'diagnostic-initial-parcelle',
         nom: 'Diagnostic initial parcelle',
-        nombreNoeuds: 8,
+        nombreNoeuds: 9,
       }),
     ]);
     const types = (await service.trouver({ id: resumes[0]?.id ?? '' })).graphe.noeuds.map(
@@ -54,6 +52,7 @@ describe('ModelesService', () => {
       'analyse.zonage',
       'decision.regles_metier',
       'restitution.devis',
+      'restitution.rapport_pdf',
     ]);
   });
 
@@ -92,39 +91,21 @@ describe('ModelesService', () => {
 
   it('exécute le diagnostic complet une fois le GPS et l’image fournis', async () => {
     const { campagne } = await creerJeuDeDonnees({ prisma: base.prisma });
-    const donneesExemple: Record<string, Record<string, string>> = {
-      import_gps: { contenu: lireExemple({ nom: 'parcelle-contour.geojson' }) },
-      ndvi: { image: lireExempleBase64({ nom: 'sentinel2-parcelle.tif' }) },
-    };
-    const snapshot: WorkflowSnapshot = {
-      workflowId: DIAGNOSTIC_INITIAL_PARCELLE.code,
-      nom: DIAGNOSTIC_INITIAL_PARCELLE.nom,
-      version: 1,
-      connexions: DIAGNOSTIC_INITIAL_PARCELLE.graphe.connexions,
-      noeuds: DIAGNOSTIC_INITIAL_PARCELLE.graphe.noeuds.map((noeud) => ({
-        ...noeud,
-        parametres: { ...noeud.parametres, ...donneesExemple[noeud.id] },
-      })),
-    };
-    const { id } = await creerExecution({ prisma: base.prisma, campagneId: campagne.id, snapshot });
-    const lancement = new LancementService(
-      base.prisma,
-      creerRegistreNoeuds(),
-      creerExecutionsService({ prisma: base.prisma }),
-    );
 
-    const execution = await lancement.executer({ id });
+    const execution = await executerDiagnostic({ prisma: base.prisma, campagneId: campagne.id });
 
     expect(execution.statut).toBe('terminee');
-    expect(execution.noeuds.map((etat) => etat.statut)).toEqual(new Array(8).fill('ok'));
+    expect(execution.noeuds.map((etat) => etat.statut)).toEqual(new Array(9).fill('ok'));
     const decisions = await new DecisionsService(base.prisma).lister({
-      filtre: { executionId: id },
+      filtre: { executionId: execution.id },
     });
-    expect(decisions).toEqual([
+    expect(decisions).toHaveLength(4);
+    expect(decisions.every((decision) => decision.statut === 'brouillon')).toBe(true);
+    expect(decisions).toContainEqual(
       expect.objectContaining({
-        statut: 'brouillon',
         noeudIds: ['import_gps', 'reprojection', 'ndvi', 'zonage', 'regles'],
+        priorite: 'haute',
       }),
-    ]);
+    );
   });
 });

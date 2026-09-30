@@ -1,7 +1,13 @@
 import type { z } from 'zod';
 
 export type ResultatLecture<Donnees> =
-  { ok: true; donnees: Donnees } | { ok: false; erreur: string };
+  | { ok: true; donnees: Donnees }
+  | {
+      ok: false;
+      erreur: string;
+      /** Code HTTP renvoyé par l'API, `null` si elle est injoignable ou la réponse invalide. */
+      statut: number | null;
+    };
 
 interface LireApiServeurParams<Schema extends z.ZodType> {
   /** Chemin de la route, ex. `/campagnes`. */
@@ -19,17 +25,22 @@ export async function lireApiServeur<Schema extends z.ZodType>({
   try {
     const reponse = await fetch(`${apiUrl}${chemin}`, { cache: 'no-store' });
     if (!reponse.ok) {
-      return { ok: false, erreur: `${chemin} : HTTP ${reponse.status}` };
+      return { ok: false, erreur: `${chemin} : HTTP ${reponse.status}`, statut: reponse.status };
     }
     const resultat = schema.safeParse(await reponse.json());
     if (!resultat.success) {
-      return { ok: false, erreur: `${chemin} : réponse non conforme au schéma partagé` };
+      return {
+        ok: false,
+        erreur: `${chemin} : réponse non conforme au schéma partagé`,
+        statut: null,
+      };
     }
     return { ok: true, donnees: resultat.data };
   } catch (erreur) {
     return {
       ok: false,
       erreur: `API injoignable (${apiUrl}) : ${erreur instanceof Error ? erreur.message : String(erreur)}`,
+      statut: null,
     };
   }
 }

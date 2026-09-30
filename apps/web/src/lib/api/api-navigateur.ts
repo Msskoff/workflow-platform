@@ -1,4 +1,5 @@
 import {
+  accesClientSchema,
   apiRoutes,
   campagneSchema,
   clientSchema,
@@ -9,13 +10,17 @@ import {
   parcelleSchema,
   resumeModeleSchema,
   SOUS_CHEMIN_LANCER_EXECUTION,
+  type AccesClient,
   type Campagne,
+  type Client,
   type CreerModele,
   type Decision,
   type DecisionEnRevue,
   type ExecutionWorkflow,
+  type GeometrieParcelle,
   type ModeleWorkflow,
   type ModifierDecision,
+  type Parcelle,
   type ResumeModele,
   type StatutDecision,
   type WorkflowSnapshot,
@@ -202,5 +207,53 @@ export function creerModele({ donnees }: { donnees: CreerModele }): Promise<Mode
     chemin: apiRoutes.modeles,
     corps: donnees,
     schema: modeleWorkflowSchema,
+  });
+}
+
+export function creerClient({
+  donnees,
+}: {
+  donnees: { nom: string; email?: string };
+}): Promise<Client> {
+  return appeler({
+    methode: 'POST',
+    chemin: apiRoutes.clients,
+    corps: donnees,
+    schema: clientSchema,
+  });
+}
+
+export function creerParcelle({
+  donnees,
+}: {
+  donnees: { clientId: string; nom: string; geometrie: GeometrieParcelle };
+}): Promise<Parcelle> {
+  return appeler({
+    methode: 'POST',
+    chemin: apiRoutes.parcelles,
+    corps: donnees,
+    schema: parcelleSchema,
+  });
+}
+
+export function creerCampagne({
+  donnees,
+}: {
+  donnees: { parcelleId: string; nom: string; culture?: string; dateDebut: string };
+}): Promise<Campagne> {
+  return appeler({
+    methode: 'POST',
+    chemin: apiRoutes.campagnes,
+    corps: donnees,
+    schema: campagneSchema,
+  });
+}
+
+/** Nouveau lien d'accès à l'espace client ; le précédent cesse de fonctionner. */
+export function genererAccesClient({ clientId }: { clientId: string }): Promise<AccesClient> {
+  return appeler({
+    methode: 'POST',
+    chemin: `${apiRoutes.clients}/${clientId}/acces`,
+    schema: accesClientSchema,
   });
 }

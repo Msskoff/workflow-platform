@@ -16,6 +16,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@fontsource/poppins": "^5.3.0",
     "@nestjs/common": "^12.1.1",
     "@nestjs/core": "^12.1.1",
     "@nestjs/platform-express": "^12.1.1",
@@ -27,6 +28,7 @@
     "@workflow/shared": "*",
     "better-sqlite3": "^12.11.1",
     "geotiff": "^3.0.5",
+    "pdfkit": "^0.20.2",
     "proj4": "^2.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
@@ -38,6 +40,7 @@
     "@nestjs/testing": "^12.1.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/geojson": "^7946.0.16",
+    "@types/pdfkit": "^0.17.6",
     "prisma": "^7.10.0"
   }
 }
