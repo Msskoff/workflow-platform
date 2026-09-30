@@ -5,6 +5,10 @@ Usage : outil INTERNE d'une entreprise d'agriculture de précision. L'équipe co
 # Flux métier
 Collecte (GPS, formulaire terrain, image satellite Sentinel-2) → Traitement et analyse → Décision (règles métier explicites, pas de ML) → Restitution (carte, décisions expliquées, rapport PDF, suivi de saison).
 
+# Références produit
+Inspirations fonctionnelles : Agworld (cycle plan → recommandation → application), ESA SNAP (graphes de nœuds exécutables par lots), Sentinel Hub (scripts de traitement versionnés), EOSDA (zonage par productivité multi-dates), Cropin (agents terrain mobiles, restitution par SMS).
+Cible : exploitations d'Afrique de l'Ouest, connexion souvent faible, fermiers parfois peu à l'aise avec le numérique.
+
 # Contraintes de code
 - Fichiers COMPLETS et corrigés, pas de snippets partiels.
 - Composants et modules réutilisables (un nœud = un module avec interface commune, un composant UI = un fichier).
