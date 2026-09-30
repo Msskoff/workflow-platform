@@ -4,6 +4,7 @@ const LIENS = [
   { href: '/editeur', libelle: 'Éditeur de workflow' },
   { href: '/revue', libelle: 'Revue des décisions' },
   { href: '/suivi', libelle: 'Suivi de campagne' },
+  { href: '/lots', libelle: 'Lots' },
   { href: '/clients', libelle: 'Clients' },
   { href: '/cultures', libelle: 'Cultures' },
 ] as const;

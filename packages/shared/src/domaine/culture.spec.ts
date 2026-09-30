@@ -106,6 +106,7 @@ describe('culture', () => {
 
 describe('paramètres par culture', () => {
   const graphe: GrapheWorkflow = {
+    variables: [],
     noeuds: [
       {
         id: 'regles',

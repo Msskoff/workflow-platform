@@ -1,6 +1,6 @@
 'use client';
 
-import type { NoeudWorkflow } from '@workflow/shared';
+import type { NoeudWorkflow, VariableWorkflow } from '@workflow/shared';
 import {
   FournisseurParametres,
   type IndicateurDisponible,
@@ -18,6 +18,8 @@ interface PanneauNoeudProps {
   surChangementParametres: (params: { parametres: NoeudWorkflow['parametres'] }) => void;
   /** Dernière exécution du workflow, `null` avant la première. */
   executionId: string | null;
+  /** Variables du workflow, auxquelles chaque paramètre peut être lié. */
+  variables: readonly VariableWorkflow[];
 }
 
 /** Panneau latéral : paramètres du nœud sélectionné et résultat de sa dernière exécution. */
@@ -26,6 +28,7 @@ export function PanneauNoeud({
   indicateursDisponibles,
   surChangementParametres,
   executionId,
+  variables,
 }: PanneauNoeudProps) {
   if (!noeud) {
     return (
@@ -64,8 +67,9 @@ export function PanneauNoeud({
           Paramètres
         </h3>
         {aDesParametres ? (
-          <FournisseurParametres value={{ indicateursDisponibles }}>
+          <FournisseurParametres value={{ indicateursDisponibles, variables }}>
             <GroupeChamps
+              liaisonVariables
               schema={schema}
               valeur={parametres}
               surChangement={({ valeur }) =>

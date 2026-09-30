@@ -1,5 +1,10 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
-import { creerDecisionSchema, type ExecutionWorkflow, type StatutNoeud } from '@workflow/shared';
+import {
+  creerDecisionSchema,
+  type ExecutionWorkflow,
+  type RessourcesExecution,
+  type StatutNoeud,
+} from '@workflow/shared';
 import { extraireDecisions } from '../moteur/extraire-decisions';
 import {
   executerWorkflow,
@@ -7,6 +12,7 @@ import {
   type ValeursParPort,
 } from '../moteur/moteur-execution';
 import { RegistreNoeuds } from '../noeuds/registre-noeuds';
+import { versParcelle } from '../parcelles/parcelles.mapper';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExecutionsService } from './executions.service';
 
@@ -65,7 +71,7 @@ export class LancementService {
       const resultat = await executerWorkflow({
         graphe: snapshot,
         registre: this.registre,
-        contexte: { executionId: id, campagneId },
+        contexte: { executionId: id, campagneId, ressources: this.ressources() },
         observateur: this.observateur({ executionId: id }),
       });
       if (resultat.statut === 'ok') {
@@ -116,6 +122,20 @@ export class LancementService {
         };
       }),
     });
+  }
+
+  /** Données de la plateforme lisibles par les nœuds (ex. contour d'une parcelle). */
+  private ressources(): RessourcesExecution {
+    return {
+      lireParcelle: async ({ id }) => {
+        const ligne = await this.prisma.parcelle.findUnique({ where: { id } });
+        if (!ligne) {
+          return null;
+        }
+        const { nom, geometrie } = versParcelle({ ligne });
+        return { id, nom, geometrie };
+      },
+    };
   }
 
   /** Observateur qui enregistre chaque changement d'état de nœud en base. */

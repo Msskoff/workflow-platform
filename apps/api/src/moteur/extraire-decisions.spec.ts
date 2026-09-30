@@ -19,6 +19,7 @@ const decisionsRegles: ResultatRegles = {
 
 // gps → ndvi → regles ; surface → regles (surface ne publie pas ndviMoyen).
 const graphe: GrapheWorkflow = {
+  variables: [],
   noeuds: [
     { id: 'gps', type: 'collecte.import_gps', parametres: {} },
     { id: 'ndvi', type: 'analyse.ndvi', parametres: {} },

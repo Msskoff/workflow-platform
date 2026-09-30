@@ -7,6 +7,7 @@ import { DonneesBrutesModule } from './donnees-brutes/donnees-brutes.module';
 import { EspaceClientModule } from './espace-client/espace-client.module';
 import { ExecutionsModule } from './executions/executions.module';
 import { HealthModule } from './health/health.module';
+import { LotsModule } from './lots/lots.module';
 import { ModelesModule } from './modeles/modeles.module';
 import { NoeudsModule } from './noeuds/noeuds.module';
 import { ParcellesModule } from './parcelles/parcelles.module';
@@ -30,6 +31,7 @@ import { SuiviModule } from './suivi/suivi.module';
     EspaceClientModule,
     RapportsModule,
     SuiviModule,
+    LotsModule,
   ],
 })
 export class AppModule {}

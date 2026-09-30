@@ -16,6 +16,8 @@ const SNAPSHOT_ANALYSE: WorkflowSnapshot = {
   workflowId: 'wf-analyse',
   nom: 'Analyse de parcelle',
   version: 1,
+  variables: [],
+  valeursVariables: {},
   noeuds: [
     {
       id: 'gps',

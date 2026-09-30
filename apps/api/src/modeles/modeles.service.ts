@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import {
   appliquerParametresCulture,
+  creerExportWorkflow,
+  lireExportWorkflow,
+  type ExportWorkflow,
+  type ImportWorkflow,
+  type ResultatImport,
   type CreerModele,
   type GrapheWorkflow,
   type ModeleWorkflow,
@@ -178,6 +183,64 @@ export class ModelesService
       messageDoublon: `Un modèle s’appelle déjà « ${donnees.nom ?? ''} »`,
     });
     return versModele({ ligne });
+  }
+
+  /** Export JSON versionné ; la culture est désignée par son code (stable d'une plateforme à l'autre). */
+  async exporter({ id }: { id: string }): Promise<ExportWorkflow> {
+    const modele = await this.trouver({ id });
+    const culture = modele.culture
+      ? await this.prisma.culture.findUnique({ where: { id: modele.culture.id } })
+      : null;
+    return creerExportWorkflow({ modele, cultureCode: culture?.code ?? null });
+  }
+
+  /**
+   * Import d'un export JSON : format et version vérifiés, schéma validé, puis chaque type de
+   * nœud recherché dans le catalogue (erreur explicite par nœud inconnu), enfin validation
+   * complète du graphe à la création du modèle.
+   */
+  async importer({ donnees }: { donnees: ImportWorkflow }): Promise<ResultatImport> {
+    const lecture = lireExportWorkflow({ contenu: donnees.contenu });
+    if (!lecture.ok) {
+      throw new BadRequestException({
+        message: 'Fichier d’export invalide',
+        erreurs: lecture.erreurs.map((message) => ({ code: 'export_invalide', message })),
+      });
+    }
+    const { workflow } = lecture.export;
+    const inconnus = workflow.graphe.noeuds.filter(
+      (noeud) => !this.registre.obtenir({ type: noeud.type }),
+    );
+    if (inconnus.length > 0) {
+      throw new BadRequestException({
+        message: 'Nœuds inconnus de cette plateforme',
+        erreurs: inconnus.map((noeud) => ({
+          code: 'type_inconnu',
+          noeudId: noeud.id,
+          message: `Nœud « ${noeud.id} » : le type « ${noeud.type} » n'existe pas sur cette plateforme (nœud retiré ou plateforme plus ancienne)`,
+        })),
+      });
+    }
+
+    const avertissements: string[] = [];
+    const culture = workflow.culture
+      ? await this.prisma.culture.findUnique({ where: { code: workflow.culture.code } })
+      : null;
+    if (workflow.culture && !culture) {
+      avertissements.push(
+        `Culture « ${workflow.culture.nom} » (${workflow.culture.code}) absente : modèle importé sans culture`,
+      );
+    }
+    const modele = await this.creer({
+      donnees: {
+        nom: donnees.nom ?? workflow.nom,
+        description: workflow.description,
+        graphe: workflow.graphe,
+        cultureId: culture?.id ?? null,
+        parametresDefaut: workflow.parametresDefaut,
+      },
+    });
+    return { modele, avertissements };
   }
 
   async supprimer({ id }: { id: string }): Promise<void> {

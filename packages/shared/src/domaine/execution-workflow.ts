@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { horodatageSchema, identifiantSchema, type Transitions } from './commun';
 import { workflowSnapshotSchema } from './workflow-snapshot';
+import { valeursVariablesSchema } from './variables-workflow';
 
 export const statutsExecution = ['en_attente', 'en_cours', 'terminee', 'echouee'] as const;
 
@@ -62,9 +63,14 @@ export const executionWorkflowSchema = z.object({
 
 export type ExecutionWorkflow = z.infer<typeof executionWorkflowSchema>;
 
+/**
+ * Création d'une exécution : le snapshot peut contenir des références `${nom}` à ses variables,
+ * résolues par l'API avec `valeursVariables` (sinon valeurs par défaut, parcelle de la campagne).
+ */
 export const creerExecutionWorkflowSchema = z.object({
   campagneId: identifiantSchema,
   snapshot: workflowSnapshotSchema,
+  valeursVariables: valeursVariablesSchema.optional(),
 });
 
 export type CreerExecutionWorkflow = z.infer<typeof creerExecutionWorkflowSchema>;

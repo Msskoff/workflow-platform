@@ -8,5 +8,6 @@ import { LancementService } from './lancement.service';
   imports: [NoeudsModule],
   controllers: [ExecutionsController],
   providers: [ExecutionsService, LancementService],
+  exports: [ExecutionsService, LancementService],
 })
 export class ExecutionsModule {}

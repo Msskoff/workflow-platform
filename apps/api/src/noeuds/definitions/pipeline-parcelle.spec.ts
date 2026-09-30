@@ -12,6 +12,7 @@ const observateurSilencieux: ObservateurExecution = {
 describe('Pipeline de parcelle (moteur + 4 nœuds)', () => {
   it('Import GPS → Reprojection → Contrôle qualité ← Formulaire terrain', async () => {
     const graphe: GrapheWorkflow = {
+      variables: [],
       noeuds: [
         { id: 'qc', type: 'standardisation.controle_qualite', parametres: {} },
         {

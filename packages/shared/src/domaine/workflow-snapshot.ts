@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { identifiantSchema, texteCourtSchema } from './commun';
+import { valeursVariablesSchema, variableWorkflowSchema } from './variables-workflow';
 
 export const positionNoeudSchema = z.object({ x: z.number(), y: z.number() });
 
@@ -66,6 +67,8 @@ function verifierReferences({ graphe, contexte }: VerifierReferencesParams): voi
 const champsGrapheWorkflow = {
   noeuds: z.array(noeudWorkflowSchema).min(1),
   connexions: z.array(connexionWorkflowSchema),
+  /** Variables d'entrée, référencées dans les paramètres par `${nom}`. */
+  variables: z.array(variableWorkflowSchema).max(30).default([]),
 };
 
 /**
@@ -86,6 +89,8 @@ export const workflowSnapshotSchema = z
     /** Version du workflow au moment de l'exécution. */
     version: z.int().positive(),
     ...champsGrapheWorkflow,
+    /** Valeurs des variables utilisées par l'exécution (les paramètres sont déjà résolus). */
+    valeursVariables: valeursVariablesSchema.default({}),
   })
   .superRefine((graphe, contexte) => verifierReferences({ graphe, contexte }));
 

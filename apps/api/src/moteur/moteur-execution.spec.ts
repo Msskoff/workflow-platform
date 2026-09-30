@@ -35,6 +35,7 @@ interface GrapheChaineParams {
 /** `mesure` → `regle`, déclarés à l'envers pour vérifier le tri topologique. */
 function grapheChaine({ valeur }: GrapheChaineParams): GrapheWorkflow {
   return {
+    variables: [],
     noeuds: [
       { id: 'regle', type: 'factice.seuil', parametres: { seuil: 20, dureeMs: 0 } },
       { id: 'mesure', type: 'factice.nombre', parametres: { valeur, dureeMs: 0 } },
@@ -95,6 +96,7 @@ describe('executerWorkflow', () => {
     });
     const { evenements, observateur } = observateurEspion();
     const avecCycle: GrapheWorkflow = {
+      variables: [],
       noeuds: [
         { id: 'a', type: 'test.relais', parametres: {} },
         { id: 'b', type: 'test.relais', parametres: {} },

@@ -1,12 +1,16 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import {
   peutTransitionner,
+  preparerValeursVariables,
+  resoudreParametres,
   transitionsStatutExecution,
   type CreerExecutionWorkflow,
   type ExecutionWorkflow,
   type FiltreExecutions,
   type ModifierExecutionWorkflow,
   type StatutExecution,
+  type ValeursVariables,
+  type WorkflowSnapshot,
 } from '@workflow/shared';
 import { calculerEmpreinte } from '../common/empreinte';
 import { executerSansConflit, introuvable } from '../common/erreurs';
@@ -59,13 +63,27 @@ export class ExecutionsService implements ServiceCrud<
    * (campagne, workflow), et un état `en_attente` par nœud. Le snapshot doit être
    * exécutable (types compatibles, sans cycle, paramètres valides) ; il est figé ensuite.
    */
+  /**
+   * Les références `${nom}` du snapshot sont résolues avec les valeurs fournies (sinon valeurs par
+   * défaut, parcelle de la campagne) ; le snapshot enregistré est le graphe résolu, validé
+   * en entier, avec les valeurs utilisées.
+   */
   async creer({ donnees }: { donnees: CreerExecutionWorkflow }): Promise<ExecutionWorkflow> {
-    const { campagneId, snapshot } = donnees;
+    const { campagneId } = donnees;
     const campagne = await this.prisma.campagne.findUnique({ where: { id: campagneId } });
     if (!campagne) {
       throw introuvable({ entite: 'Campagne', id: campagneId });
     }
 
+    const structure = validerWorkflowComplet({ graphe: donnees.snapshot, registre: this.registre });
+    if (structure.length > 0) {
+      throw new BadRequestException({ message: 'Workflow invalide', erreurs: structure });
+    }
+    const snapshot = ExecutionsService.resoudre({
+      snapshot: donnees.snapshot,
+      fournies: donnees.valeursVariables,
+      parcelleId: campagne.parcelleId,
+    });
     const erreurs = validerWorkflowComplet({ graphe: snapshot, registre: this.registre });
     if (erreurs.length > 0) {
       throw new BadRequestException({ message: 'Workflow invalide', erreurs });
@@ -92,6 +110,48 @@ export class ExecutionsService implements ServiceCrud<
   }
 
   /** Seul le statut évolue, selon `transitionsStatutExecution`. Les dates sont posées par l'API. */
+  /** Valeurs des variables puis paramètres résolus ; 400 si une variable manque ou est mal typée. */
+  private static resoudre({
+    snapshot,
+    fournies,
+    parcelleId,
+  }: {
+    snapshot: WorkflowSnapshot;
+    fournies?: ValeursVariables;
+    parcelleId: string;
+  }): WorkflowSnapshot {
+    if (snapshot.variables.length === 0) {
+      return snapshot;
+    }
+    const { valeurs, erreurs } = preparerValeursVariables({
+      variables: snapshot.variables,
+      fournies,
+      parcelleId,
+    });
+    if (erreurs.length > 0) {
+      throw new BadRequestException({
+        message: 'Variables du workflow invalides',
+        erreurs: erreurs.map((message) => ({ code: 'variable_invalide', message })),
+      });
+    }
+    // Les fichiers restent dans les paramètres résolus ; seule leur taille est tracée.
+    const fichiers = new Set(
+      snapshot.variables.filter((variable) => variable.type === 'fichier').map(({ nom }) => nom),
+    );
+    return {
+      ...snapshot,
+      noeuds: resoudreParametres({ noeuds: snapshot.noeuds, valeurs }),
+      valeursVariables: Object.fromEntries(
+        Object.entries(valeurs).map(([nom, valeur]) => [
+          nom,
+          fichiers.has(nom)
+            ? `[fichier de ${Math.round((String(valeur).length * 0.75) / 1024)} Ko]`
+            : valeur,
+        ]),
+      ),
+    };
+  }
+
   async modifier({
     id,
     donnees,

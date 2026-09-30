@@ -1,9 +1,23 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+} from '@nestjs/common';
 import {
   apiRoutes,
   creerModeleSchema,
+  importWorkflowSchema,
   modifierModeleSchema,
   type CreerModele,
+  type ImportWorkflow,
+  type ResultatImport,
   type ModeleWorkflow,
   type ModifierModele,
   type ResumeModele,
@@ -24,6 +38,30 @@ export class ModelesController {
   @Get(':id')
   trouver(@Param('id') id: string): Promise<ModeleWorkflow> {
     return this.modelesService.trouver({ id });
+  }
+
+  /** Export JSON versionné, proposé en téléchargement (`workflow-<nom>.json`). */
+  @Get(':id/export')
+  async exporter(@Param('id') id: string): Promise<StreamableFile> {
+    const contenu = await this.modelesService.exporter({ id });
+    const fichier = contenu.workflow.nom
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+    return new StreamableFile(Buffer.from(JSON.stringify(contenu, null, 2), 'utf8'), {
+      type: 'application/json; charset=utf-8',
+      disposition: `attachment; filename="workflow-${fichier}.json"`,
+    });
+  }
+
+  /** Import d'un export JSON : crée un nouveau modèle (400 explicite si invalide). */
+  @Post('import')
+  importer(
+    @Body(new ZodValidationPipe({ schema: importWorkflowSchema })) donnees: ImportWorkflow,
+  ): Promise<ResultatImport> {
+    return this.modelesService.importer({ donnees });
   }
 
   @Post()

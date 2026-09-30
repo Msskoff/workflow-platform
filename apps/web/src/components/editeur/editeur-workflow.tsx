@@ -7,6 +7,7 @@ import {
   type Campagne,
   type DescripteurNoeud,
   type ResumeModele,
+  type VariableWorkflow,
 } from '@workflow/shared';
 import {
   addEdge,
@@ -41,10 +42,12 @@ import {
 import { useExecutionWorkflow } from '@/lib/editeur/use-execution-workflow';
 import { BarreExecution } from './barre-execution';
 import { FormulaireEnregistrerModele } from './formulaire-enregistrer-modele';
+import { ImportExportWorkflow } from './import-export-workflow';
 import { ListeModeles } from './liste-modeles';
 import { NoeudWorkflow } from './noeud-workflow';
 import { PaletteNoeuds } from './palette-noeuds';
 import { PanneauNoeud } from './panneau-noeud';
+import { PanneauVariables } from './panneau-variables';
 
 const typesNoeuds: NodeTypes = { [TYPE_NOEUD_EDITEUR]: NoeudWorkflow };
 
@@ -90,6 +93,7 @@ function Editeur({
   const [noeuds, setNoeuds, surChangementNoeuds] = useNodesState<NoeudEditeur>(depart.noeuds);
   const [aretes, setAretes, surChangementAretes] = useEdgesState<Edge>(depart.aretes);
   const [identite, setIdentite] = useState<IdentiteWorkflow>(IDENTITE_LIBRE);
+  const [variables, setVariables] = useState<VariableWorkflow[]>([]);
   const [campagnes, setCampagnes] = useState(campagnesInitiales);
   const [campagneId, setCampagneId] = useState(
     campagnesInitiales.find((campagne) => campagne.id === campagneInitialeId)?.id ??
@@ -114,7 +118,10 @@ function Editeur({
   } = useExecutionWorkflow();
 
   const catalogue = useMemo(() => catalogueDepuis({ descripteurs }), [descripteurs]);
-  const graphe = useMemo(() => versGraphe({ noeuds, aretes }), [noeuds, aretes]);
+  const graphe = useMemo(
+    () => versGraphe({ noeuds, aretes, variables }),
+    [noeuds, aretes, variables],
+  );
 
   // Même validation que le serveur (hors paramètres) : bloque l'exécution tant que le graphe est invalide.
   const erreursGraphe = useMemo(
@@ -206,7 +213,8 @@ function Editeur({
   }, []);
 
   const executer = useCallback(() => {
-    void lancer({ campagneId, snapshot: { ...identite, ...graphe } });
+    // Les variables prennent leur valeur par défaut ; l'API remplit les variables « parcelle ».
+    void lancer({ campagneId, snapshot: { ...identite, ...graphe, valeursVariables: {} } });
   }, [lancer, campagneId, identite, graphe]);
 
   /** Remplace le graphe par celui du modèle ; les exécutions seront versionnées sous ce modèle. */
@@ -219,6 +227,7 @@ function Editeur({
         const charge = grapheDepuisModele({ graphe: complet.graphe, descripteurs });
         setNoeuds(charge.noeuds);
         setAretes(charge.aretes);
+        setVariables(complet.graphe.variables);
         setIdentite({
           workflowId: `modele-${complet.code ?? complet.id}`,
           nom: complet.nom,
@@ -365,6 +374,24 @@ function Editeur({
             chargementEnCours={chargementModele}
             surChargement={({ modele }) => void chargerModele({ modele })}
           />
+          <PanneauVariables
+            variables={variables}
+            surChangement={({ variables: nouvelles }) => setVariables(nouvelles)}
+          />
+          <ImportExportWorkflow
+            nom={identite.nom}
+            graphe={grapheSansDonnees({ graphe, descripteurs })}
+            surImport={({ modele, avertissements }) => {
+              const { graphe: grapheImporte, ...resume } = modele;
+              const entree = { ...resume, nombreNoeuds: grapheImporte.noeuds.length };
+              setModeles((existants) => [...existants, entree]);
+              void chargerModele({ modele: entree }).then(() =>
+                setMessageModele(
+                  `Modèle « ${modele.nom} » importé.${avertissements.length > 0 ? ` ${avertissements.join(' ')}` : ''}`,
+                ),
+              );
+            }}
+          />
           <PaletteNoeuds descripteurs={descripteurs} surAjout={ajouterNoeud} />
         </aside>
         <div className="flex-1">
@@ -387,6 +414,7 @@ function Editeur({
         <PanneauNoeud
           noeud={noeudSelectionne}
           indicateursDisponibles={indicateursDisponibles}
+          variables={variables}
           surChangementParametres={modifierParametres}
           executionId={execution?.id ?? null}
         />

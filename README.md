@@ -166,6 +166,33 @@ comparaison), régénérables par `node scripts/generer-image-exemple.mjs` depui
   modèle » garde nœuds, réglages et connexions, mais jamais les fichiers chargés (GPS, image,
   photos).
 
+## Variables, lots et export
+
+Inspiré de SNAP : un graphe conçu visuellement, puis exécuté en masse.
+
+- **Variables de workflow** : le graphe déclare des variables d'entrée (`texte`, `nombre`, `date`,
+  `parcelle`, `fichier`), référencées dans les paramètres des nœuds par `${nom}` (panneau
+  « Variables » de l'éditeur, puis « Lier à une variable » sous chaque paramètre). Une référence seule
+  est remplacée par la valeur typée, une référence dans un texte est interpolée. L'API résout les
+  variables à la création de l'exécution (valeur fournie, sinon défaut, sinon parcelle de la
+  campagne pour le type `parcelle`) et fige le graphe résolu et les valeurs dans le snapshot.
+- **Nœud « Contour de parcelle »** (`collecte.contour_parcelle`) : lit le contour enregistré d'une
+  parcelle depuis `${parcelleId}`. Modèle prédéfini **Diagnostic par lot** : contour de la parcelle,
+  image satellite et période en variables.
+- **Exécution par lot** (`/lots`) : un modèle lancé sur N parcelles (campagne la plus récente de
+  chacune). File de tâches **en base (SQLite)** plutôt que BullMQ + Redis : outil interne mono-instance,
+  pas de service supplémentaire à installer ni superviser. Réservation atomique, relances
+  automatiques espacées (3 tentatives, délai doublé), échec définitif immédiat pour une erreur de
+  préparation (pas de campagne, variable invalide), reprise au redémarrage des tâches interrompues.
+  Une parcelle en échec ne bloque jamais les autres ; « Relancer les échecs » les remet en file.
+- Réglages (`.env`) : `LOTS_CONCURRENCE` (2), `LOTS_DELAI_RELANCE_MS` (10000),
+  `LOTS_TRAVAILLEUR=desactive` pour couper le travailleur.
+- **Export / import JSON versionné** : `GET /modeles/:id/export`, `POST /modeles/import`, boutons
+  « Exporter » / « Importer » de l'éditeur. Format `workflow-platform/workflow`, version 1 ; à
+  l'import : version inconnue, erreur de schéma (avec son chemin) et nœud inconnu sont refusés avec
+  un message explicite ; la culture est retrouvée par son code.
+- API : `GET/POST /lots`, `GET /lots/:id`, `POST /lots/:id/relancer`.
+
 ## Cultures et calendrier prévisionnel
 
 - Entité `Culture` (`/cultures`) : nom, cycle en jours, stades phénologiques (durée) et leurs

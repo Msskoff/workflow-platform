@@ -18,6 +18,8 @@ export function snapshotDiagnostic({
     workflowId: DIAGNOSTIC_INITIAL_PARCELLE.code,
     nom: DIAGNOSTIC_INITIAL_PARCELLE.nom,
     version: 1,
+    variables: [],
+    valeursVariables: {},
     connexions: DIAGNOSTIC_INITIAL_PARCELLE.graphe.connexions,
     noeuds: DIAGNOSTIC_INITIAL_PARCELLE.graphe.noeuds.map((noeud) => ({
       ...noeud,

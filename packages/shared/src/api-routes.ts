@@ -14,6 +14,8 @@ export const apiRoutes = {
   modeles: '/modeles',
   /** Référentiel des cultures (stades, cycle) et propositions de campagne. */
   cultures: '/cultures',
+  /** Exécutions par lot (une tâche par parcelle, file en base). */
+  lots: '/lots',
   /** Lecture seule pour l'espace client : décisions envoyées uniquement. */
   espaceClient: '/espace-client',
   /** Suivi de campagne interne : conseillé, appliqué, reste à faire. */

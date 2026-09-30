@@ -101,6 +101,7 @@ export const DIAGNOSTIC_INITIAL_PARCELLE: ModelePredefini = {
   description:
     'Contour GPS contrôlé et reprojeté en Lambert-93, surface, NDVI et zonage en 3 zones, règles agronomiques, devis et rapport PDF pour le client.',
   graphe: {
+    variables: [],
     noeuds: [
       { id: 'import_gps', type: 'collecte.import_gps', parametres: {}, position: { x: 0, y: 220 } },
       {
@@ -244,8 +245,80 @@ export const DIAGNOSTICS_PAR_CULTURE: readonly ModelePredefini[] = CULTURES_EXEM
   },
 );
 
+/**
+ * Diagnostic pensé pour l'exécution par lot (à la manière d'un graphe SNAP paramétré) :
+ * le contour vient de la parcelle en base (`${parcelleId}`, rempli pour chaque parcelle du lot),
+ * l'image satellite et la période sont des variables fournies au lancement.
+ */
+export const DIAGNOSTIC_PAR_LOT: ModelePredefini = {
+  code: 'diagnostic-par-lot',
+  nom: 'Diagnostic par lot (parcelles enregistrées)',
+  description:
+    'Diagnostic initial sur le contour enregistré de chaque parcelle : variables parcelleId, image satellite et période, pour l’exécution par lot.',
+  graphe: {
+    variables: [
+      {
+        nom: 'parcelleId',
+        type: 'parcelle',
+        libelle: 'Parcelle',
+        obligatoire: true,
+        valeurParDefaut: null,
+      },
+      {
+        nom: 'image',
+        type: 'fichier',
+        libelle: 'Image satellite (GeoTIFF rouge + PIR)',
+        obligatoire: true,
+        valeurParDefaut: null,
+      },
+      {
+        nom: 'dateDebut',
+        type: 'date',
+        libelle: 'Début de la période analysée',
+        obligatoire: true,
+        valeurParDefaut: null,
+      },
+      {
+        nom: 'dateFin',
+        type: 'date',
+        libelle: 'Fin de la période analysée',
+        obligatoire: true,
+        valeurParDefaut: null,
+      },
+    ],
+    noeuds: DIAGNOSTIC_INITIAL_PARCELLE.graphe.noeuds.map((noeud) => {
+      if (noeud.id === 'import_gps') {
+        return {
+          id: 'contour',
+          type: 'collecte.contour_parcelle',
+          parametres: { parcelleId: '${parcelleId}' },
+          position: noeud.position,
+        };
+      }
+      if (noeud.id === 'ndvi') {
+        return { ...noeud, parametres: { ...noeud.parametres, image: '${image}' } };
+      }
+      if (noeud.id === 'rapport') {
+        return {
+          ...noeud,
+          parametres: {
+            ...noeud.parametres,
+            introduction:
+              'Voici le bilan de votre parcelle pour la période du ${dateDebut} au ${dateFin}, établi à partir de son contour et d’une image satellite. Nous en tirons quelques recommandations simples, chacune expliquée.',
+          },
+        };
+      }
+      return noeud;
+    }),
+    connexions: DIAGNOSTIC_INITIAL_PARCELLE.graphe.connexions.map((connexion) =>
+      connexion.source === 'import_gps' ? lien({ ...connexion, source: 'contour' }) : connexion,
+    ),
+  },
+};
+
 /** Modèles fournis par la plateforme, synchronisés en base au démarrage de l'API. */
 export const MODELES_PREDEFINIS: readonly ModelePredefini[] = [
   DIAGNOSTIC_INITIAL_PARCELLE,
+  DIAGNOSTIC_PAR_LOT,
   ...DIAGNOSTICS_PAR_CULTURE,
 ];

@@ -32,6 +32,8 @@ export const SNAPSHOT_TEST: WorkflowSnapshot = {
   workflowId: 'wf-irrigation',
   nom: 'Irrigation',
   version: 3,
+  variables: [],
+  valeursVariables: {},
   noeuds: [
     { id: 'mesure', type: 'factice.nombre', parametres: { valeur: 25, dureeMs: 0 } },
     { id: 'regle', type: 'factice.seuil', parametres: { seuil: 20, dureeMs: 0 } },

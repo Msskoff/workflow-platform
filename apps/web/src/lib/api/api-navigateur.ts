@@ -7,7 +7,9 @@ import {
   decisionEnRevueSchema,
   decisionSchema,
   executionWorkflowSchema,
+  lotSchema,
   modeleWorkflowSchema,
+  resultatImportSchema,
   planCampagneSchema,
   propositionCampagneSchema,
   parcelleSchema,
@@ -16,17 +18,20 @@ import {
   type AccesClient,
   type Campagne,
   type Client,
+  type CreerLot,
   type CreerModele,
   type Decision,
   type DecisionClient,
   type DecisionEnRevue,
   type ExecutionWorkflow,
   type GeometrieParcelle,
+  type Lot,
   type ModeleWorkflow,
   type ModifierDecision,
   type Parcelle,
   type PlanCampagne,
   type PropositionCampagne,
+  type ResultatImport,
   type ResumeModele,
   type StatutDecision,
   type WorkflowSnapshot,
@@ -309,5 +314,43 @@ export function lirePlanCampagne({ campagneId }: { campagneId: string }): Promis
     methode: 'GET',
     chemin: `${apiRoutes.campagnes}/${encodeURIComponent(campagneId)}/plan`,
     schema: planCampagneSchema,
+  });
+}
+
+/** Import d'un export JSON de workflow : crée un modèle (erreurs détaillées si refusé). */
+export function importerWorkflow({
+  contenu,
+  nom,
+}: {
+  contenu: unknown;
+  nom?: string;
+}): Promise<ResultatImport> {
+  return appeler({
+    methode: 'POST',
+    chemin: `${apiRoutes.modeles}/import`,
+    corps: { contenu, ...(nom && { nom }) },
+    schema: resultatImportSchema,
+  });
+}
+
+/** Lance un modèle sur plusieurs parcelles (une tâche par parcelle, traitées en arrière-plan). */
+export function creerLot({ donnees }: { donnees: CreerLot }): Promise<Lot> {
+  return appeler({ methode: 'POST', chemin: apiRoutes.lots, corps: donnees, schema: lotSchema });
+}
+
+export function lireLot({ id }: { id: string }): Promise<Lot> {
+  return appeler({
+    methode: 'GET',
+    chemin: `${apiRoutes.lots}/${encodeURIComponent(id)}`,
+    schema: lotSchema,
+  });
+}
+
+/** Remet en file les parcelles en échec d'un lot. */
+export function relancerEchecsLot({ id }: { id: string }): Promise<Lot> {
+  return appeler({
+    methode: 'POST',
+    chemin: `${apiRoutes.lots}/${encodeURIComponent(id)}/relancer`,
+    schema: lotSchema,
   });
 }

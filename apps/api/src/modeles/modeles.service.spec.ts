@@ -8,6 +8,7 @@ import { creerJeuDeDonnees } from '../test/jeu-de-donnees';
 import { ModelesService } from './modeles.service';
 
 const GRAPHE_SIMPLE: GrapheWorkflow = {
+  variables: [],
   noeuds: [
     { id: 'gps', type: 'collecte.import_gps', parametres: {} },
     { id: 'surface', type: 'analyse.surface_perimetre', parametres: {} },
@@ -33,7 +34,7 @@ describe('ModelesService', () => {
     await service.synchroniserPredefinis();
 
     const predefinis = (await service.listerResumes()).filter((resume) => resume.predefini);
-    // Le diagnostic générique et ses trois déclinaisons par culture (sans culture en base :
+    // Le diagnostic générique, sa version par lot et ses trois déclinaisons par culture (sans culture en base :
     // pas encore de rattachement tant que le seed n'a pas tourné).
     expect(
       predefinis
@@ -44,6 +45,7 @@ describe('ModelesService', () => {
       { code: 'diagnostic-initial-parcelle', culture: null },
       { code: 'diagnostic-mais', culture: null },
       { code: 'diagnostic-manioc', culture: null },
+      { code: 'diagnostic-par-lot', culture: null },
     ]);
     const generique = predefinis.find((resume) => resume.code === 'diagnostic-initial-parcelle');
     expect(generique).toMatchObject({ nom: 'Diagnostic initial parcelle', nombreNoeuds: 9 });

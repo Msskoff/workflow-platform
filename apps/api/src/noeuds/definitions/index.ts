@@ -1,4 +1,5 @@
 import type { NodeDefinition } from '@workflow/shared';
+import { noeudContourParcelle } from './contour-parcelle.noeud';
 import { noeudControleQualite } from './controle-qualite.noeud';
 import { noeudDevis } from './devis.noeud';
 import { noeudFacticeNombre } from './factice-nombre.noeud';
@@ -18,6 +19,7 @@ import { noeudZonage } from './zonage.noeud';
  */
 export const definitionsNoeuds: readonly NodeDefinition[] = [
   noeudImportGps,
+  noeudContourParcelle,
   noeudFormulaireTerrain,
   noeudReprojection,
   noeudControleQualite,

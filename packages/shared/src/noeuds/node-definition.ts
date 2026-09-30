@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { GeometrieParcelle } from '../domaine/geojson';
 import { typeDonneeSchema, type TypeDonnee, type ValeurDonnee } from './types-donnees';
 
 /** Étapes du flux métier : collecte → standardisation → analyse → décision → restitution. */
@@ -66,12 +67,28 @@ type PortsOptionnels<Ports extends PortsDefinition> = {
 export type ValeursPorts<Ports extends PortsDefinition> = PortsObligatoires<Ports> &
   PortsOptionnels<Ports>;
 
+/** Parcelle telle qu'un nœud peut la lire (géométrie en WGS84). */
+export interface ParcelleRessource {
+  id: string;
+  nom: string;
+  geometrie: GeometrieParcelle;
+}
+
+/**
+ * Données de la plateforme accessibles aux nœuds, en lecture seule. Fournies par l'API ;
+ * absentes quand un nœud est exécuté hors plateforme (tests unitaires).
+ */
+export interface RessourcesExecution {
+  lireParcelle(params: { id: string }): Promise<ParcelleRessource | null>;
+}
+
 /** Contexte fourni par le moteur à chaque exécution de nœud. */
 export interface ExecutionContext {
   executionId: string;
   campagneId: string;
   /** Identifiant de l'instance du nœud dans le workflow. */
   noeudId: string;
+  ressources?: RessourcesExecution;
 }
 
 export interface RunArgs<Entrees extends PortsDefinition, Parametres> {

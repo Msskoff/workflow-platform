@@ -1,11 +1,13 @@
-import type {
-  CatalogueNoeuds,
-  CategorieNoeud,
-  ConnexionWorkflow,
-  DescripteurNoeud,
-  EtatNoeud,
-  GrapheWorkflow,
-  NoeudWorkflow,
+import {
+  referenceSeule,
+  type CatalogueNoeuds,
+  type CategorieNoeud,
+  type ConnexionWorkflow,
+  type DescripteurNoeud,
+  type EtatNoeud,
+  type GrapheWorkflow,
+  type NoeudWorkflow,
+  type VariableWorkflow,
 } from '@workflow/shared';
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 
@@ -77,11 +79,15 @@ export function indicateursEnAmont({
 export function versGraphe({
   noeuds,
   aretes,
+  variables = [],
 }: {
   noeuds: readonly NoeudEditeur[];
   aretes: readonly Edge[];
+  /** Variables d'entrée déclarées dans l'éditeur. */
+  variables?: readonly VariableWorkflow[];
 }): GrapheWorkflow {
   return {
+    variables: [...variables],
     noeuds: noeuds.map((noeud) => ({
       id: noeud.id,
       type: noeud.data.descripteur.id,
@@ -215,6 +221,7 @@ type ProprieteParametre = { widget?: string; champNomFichier?: string };
 /**
  * Graphe à enregistrer comme modèle : on retire les données chargées (fichier GPS, image,
  * photos) pour ne garder que les réglages. Un modèle ne transporte pas les données d'un client.
+ * Un champ de fichier lié à une variable (`${image}`) est conservé : c'est un réglage.
  */
 export function grapheSansDonnees({
   graphe,
@@ -224,6 +231,7 @@ export function grapheSansDonnees({
   descripteurs: readonly DescripteurNoeud[];
 }): GrapheWorkflow {
   return {
+    variables: graphe.variables,
     connexions: graphe.connexions,
     noeuds: graphe.noeuds.map((noeud) => {
       const proprietes = (descripteurs.find((descripteur) => descripteur.id === noeud.type)
@@ -238,7 +246,9 @@ export function grapheSansDonnees({
       return {
         ...noeud,
         parametres: Object.fromEntries(
-          Object.entries(noeud.parametres).filter(([nom]) => !aRetirer.has(nom)),
+          Object.entries(noeud.parametres).filter(
+            ([nom, valeur]) => !aRetirer.has(nom) || referenceSeule({ valeur }) !== null,
+          ),
         ),
       };
     }),

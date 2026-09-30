@@ -47,6 +47,7 @@ model Parcelle {
   /// Calculée par l'API à partir de la géométrie.
   surfaceHa Float
   campagnes Campagne[]
+  tachesLot TacheLot[]
   creeLe    DateTime   @default(now())
   modifieLe DateTime   @updatedAt
 
@@ -68,6 +69,7 @@ model Campagne {
   dateFin       String?
   donneesBrutes DonneeBrute[]
   executions    ExecutionWorkflow[]
+  tachesLot     TacheLot[]
   creeLe        DateTime            @default(now())
   modifieLe     DateTime            @updatedAt
 
@@ -109,6 +111,7 @@ model ExecutionWorkflow {
   termineeLe        DateTime?
   noeuds            ExecutionNoeud[]
   decisions         Decision[]
+  tachesLot         TacheLot[]
   creeLe            DateTime         @default(now())
   modifieLe         DateTime         @updatedAt
 
@@ -200,6 +203,7 @@ model ModeleWorkflow {
   parametresDefaut Json?
   /// Graphe : nœuds (type, paramètres, position) et connexions (voir grapheWorkflowSchema).
   graphe           Json
+  lots             Lot[]
   creeLe           DateTime @default(now())
   modifieLe        DateTime @updatedAt
 }
@@ -219,4 +223,54 @@ model Culture {
   modeles         ModeleWorkflow[]
   creeLe          DateTime         @default(now())
   modifieLe       DateTime         @updatedAt
+}
+
+/// Exécution par lot : un modèle lancé sur plusieurs parcelles. Le graphe est copié à la
+/// création (le lot n'est pas affecté si le modèle change ou disparaît ensuite).
+model Lot {
+  id         String          @id @default(cuid())
+  nom        String
+  modeleId   String?
+  modele     ModeleWorkflow? @relation(fields: [modeleId], references: [id], onDelete: SetNull)
+  modeleNom  String
+  /// Identité des exécutions créées (versionnées par campagne).
+  workflowId String
+  /// Graphe du modèle (nœuds, connexions, variables) au moment du lancement.
+  graphe     Json
+  /// Valeurs communes des variables (les variables « parcelle » sont remplies par tâche).
+  valeurs    Json
+  taches     TacheLot[]
+  creeLe     DateTime        @default(now())
+  modifieLe  DateTime        @updatedAt
+}
+
+/// Tâche de la file : une parcelle d'un lot. File en base (SQLite), traitée par le travailleur
+/// de l'API avec relances espacées ; un échec n'affecte pas les autres tâches.
+model TacheLot {
+  id                   String             @id @default(cuid())
+  lotId                String
+  lot                  Lot                @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  parcelleId           String
+  parcelle             Parcelle           @relation(fields: [parcelleId], references: [id], onDelete: Restrict)
+  /// Campagne la plus récente de la parcelle au lancement (null : aucune, échec immédiat).
+  campagneId           String?
+  campagne             Campagne?          @relation(fields: [campagneId], references: [id], onDelete: Restrict)
+  /// en_attente | en_cours | reussie | echouee
+  statut               String             @default("en_attente")
+  tentatives           Int                @default(0)
+  maxTentatives        Int                @default(3)
+  /// Date à partir de laquelle la tâche peut être (re)prise.
+  prochaineTentativeLe DateTime?          @default(now())
+  /// Prise en charge par le travailleur (détection des tâches interrompues).
+  verrouilleeLe        DateTime?
+  termineeLe           DateTime?
+  erreur               String?
+  /// Dernière exécution lancée pour cette tâche.
+  executionId          String?
+  execution            ExecutionWorkflow? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  creeLe               DateTime           @default(now())
+  modifieLe            DateTime           @updatedAt
+
+  @@unique([lotId, parcelleId])
+  @@index([statut, prochaineTentativeLe])
 }

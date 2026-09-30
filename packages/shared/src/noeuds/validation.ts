@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { problemesVariables, type VariableWorkflow } from '../domaine/variables-workflow';
 import type { ConnexionWorkflow, NoeudWorkflow } from '../domaine/workflow-snapshot';
 import { estAtteignable } from './graphe';
 import type { PortsDefinition } from './node-definition';
@@ -13,6 +14,7 @@ export const codesErreurWorkflow = [
   'cycle',
   'entree_obligatoire_manquante',
   'parametres_invalides',
+  'variable_inconnue',
 ] as const;
 
 export const erreurWorkflowSchema = z.object({
@@ -38,8 +40,12 @@ export interface SignatureNoeud {
 export type CatalogueNoeuds = Readonly<Record<string, SignatureNoeud>>;
 
 interface GrapheAValider {
-  noeuds: readonly Pick<NoeudWorkflow, 'id' | 'type'>[];
+  noeuds: readonly (Pick<NoeudWorkflow, 'id' | 'type'> & {
+    parametres?: Record<string, unknown>;
+  })[];
   connexions: readonly ConnexionWorkflow[];
+  /** Variables déclarées : toute référence `${nom}` non déclarée est une erreur. */
+  variables?: readonly VariableWorkflow[];
 }
 
 export type ResultatConnexion = { ok: true } | { ok: false; erreur: ErreurWorkflow };
@@ -179,6 +185,10 @@ export function validerWorkflow({ graphe, catalogue }: ValiderWorkflowParams): E
         });
       }
     }
+  }
+
+  for (const probleme of problemesVariables({ graphe })) {
+    erreurs.push({ code: 'variable_inconnue', ...probleme });
   }
 
   return erreurs;

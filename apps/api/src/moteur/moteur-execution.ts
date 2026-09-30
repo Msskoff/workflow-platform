@@ -8,6 +8,7 @@ import {
   type TypeDonnee,
   type ValeurDonnee,
   type ValeursPorts,
+  type RessourcesExecution,
 } from '@workflow/shared';
 import type { RegistreNoeuds } from '../noeuds/registre-noeuds';
 import { validerWorkflowComplet } from './valider-workflow';
@@ -39,7 +40,7 @@ export type ResultatExecution =
 interface ExecuterWorkflowParams {
   graphe: Pick<GrapheWorkflow, 'noeuds' | 'connexions'>;
   registre: RegistreNoeuds;
-  contexte: { executionId: string; campagneId: string };
+  contexte: { executionId: string; campagneId: string; ressources?: RessourcesExecution };
   observateur: ObservateurExecution;
 }
 
